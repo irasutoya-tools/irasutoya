@@ -48,7 +48,7 @@ module Irasutoya
     end
 
     def description_from(document:)
-      document.css('.entry').css('.separator')[1].text
+      document.css('.entry').css('.separator')[1].text.strip
     end
 
     def image_url_from(document:)
