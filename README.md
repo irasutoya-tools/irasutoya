@@ -7,7 +7,7 @@
 ![](http://ruby-gem-downloads-badge.herokuapp.com/irasutoya?type=total)
 ![GitHub](https://img.shields.io/github/license/unhappychoice/irasutoya.svg)
 
-`Irasutoya` is ruby library and CLI tool for [いらすとや](https://www.irasutoya.com)
+`Irasutoya` is ruby library for [いらすとや](https://www.irasutoya.com)
 
 ## Installation
 
