@@ -19,7 +19,26 @@ gem 'irasutoya'
 ## Usage
 
 ```ruby
-Irasutoya.random #=> Returns a random image from irasutoya
+# Irasuto
+irasuto = Irasutoya::Irasuto.random #=> returns Irasuto instance
+irasuto.url
+irasuto.title
+irasuto.description
+irasuto.image_url
+
+# Category
+categories = Irasutoya::Category.all #=> returns array of Category instance
+category = categories.first
+category.name
+category.list_url
+
+# IrasutoLinks
+irasuto_links = category.fetch_irasuto_links #=> returns array of IrasutoLink instance
+irasuto_link = irasuto_links.first
+irasuto_link.title
+irasuto_link.show_url
+
+irasutos = irasuto_link.fetch_irasuto #=> returns array of Irasuto instance
 ```
 
 ## Contributing
