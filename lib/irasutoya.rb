@@ -1,4 +1,6 @@
-require "irasutoya/version"
+# frozen_string_literal: true
+
+require 'irasutoya/version'
 
 module Irasutoya
   class Error < StandardError; end
