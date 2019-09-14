@@ -3,6 +3,7 @@
 module Irasutoya
   class Category
     include Modules::HasDocumentFetcher
+    include Modules::HasListPageParser
 
     attr_reader :list_url, :name
 
@@ -23,6 +24,13 @@ module Irasutoya
           .uniq
           .select { |href| href.include?('label') }
           .map { |href| Category.new(name: CGI.unescape(href.split('/')[5]), list_url: href) }
+      end
+    end
+
+    def fetch_irasuto_links
+      document = fetch_page_and_parse(list_url)
+      parse_list_page(document: document).map do |parsed|
+        IrasutoLink.new(title: parsed[:title], show_url: parsed[:show_url])
       end
     end
   end

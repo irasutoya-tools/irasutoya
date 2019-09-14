@@ -4,6 +4,7 @@ require 'irasutoya/modules'
 
 require 'irasutoya/category'
 require 'irasutoya/irasuto'
+require 'irasutoya/irasuto_link'
 require 'irasutoya/version'
 require 'cgi'
 require 'json'
