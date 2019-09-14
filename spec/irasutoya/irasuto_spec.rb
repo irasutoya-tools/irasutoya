@@ -4,7 +4,7 @@ RSpec.describe Irasutoya::Irasuto do
   describe '#random' do
     before do
       allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/post.html') }
+      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
     end
 
     it 'should return random irasuto' do
