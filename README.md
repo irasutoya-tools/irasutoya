@@ -26,14 +26,17 @@ irasuto.title
 irasuto.description
 irasuto.image_url
 
+irasuto_links = Irasutoya::Irasuto.search(query: 'おじさん', page: 3) #=> returns array of IrasutoLink instance
+
 # Category
 categories = Irasutoya::Category.all #=> returns array of Category instance
 category = categories.first
-category.name
+category.title
 category.list_url
 
-# IrasutoLinks
 irasuto_links = category.fetch_irasuto_links #=> returns array of IrasutoLink instance
+
+# IrasutoLinks
 irasuto_link = irasuto_links.first
 irasuto_link.title
 irasuto_link.show_url

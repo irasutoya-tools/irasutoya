@@ -33,13 +33,13 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
       expect(Irasutoya::Category.all.size).to eq 237
     end
 
-    it 'should return all the category names' do
-      expect(Irasutoya::Category.all.map(&:name)).to eq expected
+    it 'should return all the category titles' do
+      expect(Irasutoya::Category.all.map(&:title)).to eq expected
     end
   end
 
   describe '#fetch_irasuto_links' do
-    let(:category) { Irasutoya::Category.new(name: 'お正月', list_url: 'https://www.irasutoya.com/search/label/お正月') }
+    let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: 'https://www.irasutoya.com/search/label/お正月') }
     let(:expected) do
       %w[
         「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
