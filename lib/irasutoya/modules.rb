@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'irasutoya/modules/has_document_fetcher'
+require 'irasutoya/modules/has_show_page_parser'
 
 module Irasutoya
   module Modules

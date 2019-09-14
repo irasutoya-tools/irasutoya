@@ -3,6 +3,7 @@
 module Irasutoya
   class Irasuto
     include Modules::HasDocumentFetcher
+    include Modules::HasShowPageParser
 
     attr_reader :url, :title, :description, :image_url
 
@@ -17,13 +18,9 @@ module Irasutoya
       def random
         url = random_url
         document = fetch_page_and_parse(url)
+        parsed = parse_show_page(document: document)
 
-        Irasuto.new(
-          url: url,
-          title: title_from(document: document),
-          description: description_from(document: document),
-          image_url: image_url_from(document: document)
-        )
+        Irasuto.new(url: url, title: parsed[:title], description: parsed[:description], image_url: parsed[:image_url])
       end
 
       private
@@ -43,19 +40,6 @@ module Irasutoya
             .select { |link| link['rel'] == 'alternate' }
             .first
             .dig('href')
-      end
-
-      def title_from(document:)
-        document.css('.post').css('.title').search('h2').text.strip
-      end
-
-      def description_from(document:)
-        document.css('.entry').css('.separator')[1].text.strip
-      end
-
-      def image_url_from(document:)
-        image = document.css('.entry').search('img').attribute('src').value
-        image.chars.first == '/' ? 'http:' + image : image
       end
     end
   end
