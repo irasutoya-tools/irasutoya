@@ -31,7 +31,7 @@ irasuto_links = Irasutoya::Irasuto.search(query: 'おじさん', page: 3) #=> re
 # Category
 categories = Irasutoya::Category.all #=> returns array of Category instance
 category = categories.first
-category.name
+category.title
 category.list_url
 
 irasuto_links = category.fetch_irasuto_links #=> returns array of IrasutoLink instance

@@ -5,10 +5,10 @@ module Irasutoya
     include Modules::HasDocumentFetcher
     include Modules::HasListPageParser
 
-    attr_reader :list_url, :name
+    attr_reader :list_url, :title
 
-    def initialize(name:, list_url:)
-      @name = name
+    def initialize(title:, list_url:)
+      @title = title
       @list_url = list_url
     end
 
@@ -23,7 +23,7 @@ module Irasutoya
           .map { |a| a.attribute('href').value }
           .uniq
           .select { |href| href.include?('label') }
-          .map { |href| Category.new(name: CGI.unescape(href.split('/')[5]), list_url: href) }
+          .map { |href| Category.new(title: CGI.unescape(href.split('/')[5]), list_url: href) }
       end
     end
 
