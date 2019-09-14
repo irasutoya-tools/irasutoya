@@ -37,4 +37,30 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
       expect(Irasutoya::Category.all.map(&:name)).to eq expected
     end
   end
+
+  describe '#fetch_irasuto_links' do
+    let(:category) { Irasutoya::Category.new(name: 'お正月', list_url: 'https://www.irasutoya.com/search/label/お正月') }
+    let(:expected) do
+      %w[
+        「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
+        親戚づきあいが苦手な人のイラスト（男性） 親戚の集まりのイラスト お汁粉のイラスト 日の出に照らされるぴょこのイラスト
+        電子マネー対応の賽銭箱のイラスト（QRコード） 懐中しるこのイラスト 二人羽織のイラスト（女性）
+        獅子舞に頭を噛まれる人のイラスト（女性） 獅子舞に頭を噛まれる人のイラスト（男性） お正月のライン素材（亥年）
+        「2019」のイラスト文字 和服を着た高齢の女性のイラスト 和服を着た高齢の男性のイラスト 和服を着た中年女性のイラスト
+        和服を着た中年男性のイラスト 書き初めをする猪のイラスト（亥年） 福袋を持った猪のイラスト（亥年）
+      ]
+    end
+
+    before do
+      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+    end
+
+    it 'should return irasuto links' do
+      expect(category.fetch_irasuto_links.size).to eq 20
+    end
+
+    it 'should return irasutos' do
+      expect(category.fetch_irasuto_links.map(&:title)).to eq expected
+    end
+  end
 end
