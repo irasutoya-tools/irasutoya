@@ -44,7 +44,7 @@ module Irasutoya
     end
 
     def title_from(document:)
-      document.css('.post').css('.title').search('h2').text.gsub("\n", '')
+      document.css('.post').css('.title').search('h2').text.strip
     end
 
     def description_from(document:)
