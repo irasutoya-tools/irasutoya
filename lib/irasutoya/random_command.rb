@@ -2,6 +2,8 @@
 
 module Irasutoya
   class RandomCommand
+    include Modules::HasDocumentFetcher
+
     MAX_INDEX = 22_208
 
     def run
@@ -32,15 +34,6 @@ module Irasutoya
           .select { |link| link['rel'] == 'alternate' }
           .first
           .dig('href')
-    end
-
-    def fetch_page_and_parse(url)
-      charset = nil
-      html = URI.parse(url).open do |f|
-        charset = f.charset
-        f.read
-      end
-      Nokogiri::HTML.parse(html, nil, charset)
     end
 
     def title_from(document:)
