@@ -45,7 +45,7 @@ irasuto_link = irasuto_links.first
 irasuto_link.title
 irasuto_link.show_url
 
-irasutos = irasuto_link.fetch_irasuto #=> returns array of Irasuto instance
+irasuto = irasuto_link.fetch_irasuto #=> returns Irasuto instance
 ```
 
 ## Contributing
