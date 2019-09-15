@@ -7,7 +7,9 @@
 ![](http://ruby-gem-downloads-badge.herokuapp.com/irasutoya?type=total)
 ![GitHub](https://img.shields.io/github/license/unhappychoice/irasutoya.svg)
 
-<img src="https://1.bp.blogspot.com/-QU1PrEXerMg/XWS5ZxD-tsI/AAAAAAABUR4/1EuTP776BowewKdMAgnAUpUB5m3O7ve-ACLcBGAs/s1600/computer_screen_programming.png" width="400"/>
+<p align="center">
+  <img src="https://1.bp.blogspot.com/-QU1PrEXerMg/XWS5ZxD-tsI/AAAAAAABUR4/1EuTP776BowewKdMAgnAUpUB5m3O7ve-ACLcBGAs/s1600/computer_screen_programming.png" width="400"/>
+</p>
 
 `Irasutoya` is ruby library for [いらすとや](https://www.irasutoya.com)
 
