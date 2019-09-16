@@ -1,6 +1,7 @@
 # Irasutoya
 
 [![Gem Version](https://badge.fury.io/rb/irasutoya.svg)](https://badge.fury.io/rb/irasutoya)
+[![Circle CI](https://circleci.com/gh/unhappychoice/irasutoya.svg?style=shield)](https://circleci.com/gh/unhappychoice/irasutoya)
 [![Code Climate](https://codeclimate.com/github/unhappychoice/irasutoya/badges/gpa.svg)](https://codeclimate.com/github/unhappychoice/irasutoya)
 [![codecov](https://codecov.io/gh/unhappychoice/irasutoya/branch/master/graph/badge.svg)](https://codecov.io/gh/unhappychoice/irasutoya)
 [![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/unhappychoice/irasutoya.svg)](https://libraries.io/github/unhappychoice/irasutoya)
