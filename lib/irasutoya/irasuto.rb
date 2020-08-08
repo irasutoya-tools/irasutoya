@@ -47,7 +47,7 @@ module Irasutoya
 
       def random_url
         jsonp = Net::HTTP.get('www.irasutoya.com', random_api_path)
-        JSON.parse(jsonp[/{.+}/])
+        JSON.parse(jsonp[/{.+}/]) # rubocop:disable Style/SingleArgumentDig
             .dig('feed', 'entry')
             .first
             .dig('link')
