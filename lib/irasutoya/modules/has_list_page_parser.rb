@@ -4,6 +4,7 @@ module Irasutoya
   module Modules
     module HasListPageParser
       def self.included(klass)
+        super
         klass.send(:include, Irasutoya::Modules::HasListPageParser::Methods)
         klass.send(:extend, Irasutoya::Modules::HasListPageParser::Methods)
       end

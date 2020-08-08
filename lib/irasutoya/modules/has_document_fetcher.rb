@@ -4,6 +4,7 @@ module Irasutoya
   module Modules
     module HasDocumentFetcher
       def self.included(klass)
+        super
         klass.send(:include, Irasutoya::Modules::HasDocumentFetcher::Methods)
         klass.send(:extend, Irasutoya::Modules::HasDocumentFetcher::Methods)
       end

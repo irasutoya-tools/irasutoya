@@ -4,6 +4,7 @@ module Irasutoya
   module Modules
     module HasShowPageParser
       def self.included(klass)
+        super
         klass.send(:include, Irasutoya::Modules::HasShowPageParser::Methods)
         klass.send(:extend, Irasutoya::Modules::HasShowPageParser::Methods)
       end
@@ -30,7 +31,7 @@ module Irasutoya
 
           def image_url_from(document:)
             image = document.css('.entry').search('img').attribute('src').value
-            image.chars.first == '/' ? 'http:' + image : image
+            image.chars.first == '/' ? "http:#{image}" : image
           end
         end
       end
