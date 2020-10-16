@@ -22,16 +22,18 @@ module Irasutoya
       module PrivateMethods
         class << self
           def title_from(document:)
-            document.css(".post").css(".title").search("h2").text.strip
+            document.css('.post').css('.title').search('h2').text.strip
           end
 
           def description_from(document:)
-            document.css(".entry").css(".separator")[1].text.strip
+            document.css('.entry').css('.separator')[1].text.strip
           end
 
           def image_url_from(document:)
-            image = document.css(".entry").search("img").attribute("src").value
-            image.chars.first == "/" ? "https:#{image}" : image
+            image = document.css('.entry').search('img').attribute('src').value
+            image.chars.first == '/' ? "https:#{image}" : image
+          end
+
           end
         end
       end
