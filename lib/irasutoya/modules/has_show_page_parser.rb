@@ -14,7 +14,7 @@ module Irasutoya
           {
             title: PrivateMethods.title_from(document: document),
             description: PrivateMethods.description_from(document: document),
-            image_url: PrivateMethods.image_url_from(document: document)
+            image_urls: PrivateMethods.image_urls_from(document: document)
           }
         end
       end
@@ -34,6 +34,11 @@ module Irasutoya
             image.chars.first == '/' ? "https:#{image}" : image
           end
 
+          def image_urls_from(document:)
+            sources = document.css('.entry').search('img').collect do |img|
+              img[:src]
+            end
+            sources.collect { |url| url.start_with?('/') ? "https:#{url}" : url }
           end
         end
       end
