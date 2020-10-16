@@ -24,7 +24,46 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     it 'should return random irasuto with image_url' do
-      expect(Irasutoya::Irasuto.random.image_url).to eq('http://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
+      expect(Irasutoya::Irasuto.random.image_url).to eq('https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
+    end
+
+    it 'should not have postthumb_image_url when image size is 1' do
+      expect(Irasutoya::Irasuto.random.postthumb_image_url).to be_nil
+    end
+
+    it 'should not have images with size 1' do
+      expect(Irasutoya::Irasuto.random.image_urls).to match [String]
+    end
+
+    context 'when there are multiple images on a page' do
+      before do
+        allow(URI).to receive_message_chain(:parse, :open) {
+          File.read('spec/files/show_multiple_images.html')
+        }
+      end
+
+      it 'should return random irasuto with image_url' do
+        expect(Irasutoya::Irasuto.random.image_url).to eq('https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg')
+        expect(Irasutoya::Irasuto.random.postthumb_image_url).to eq('https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg')
+      end
+
+      it 'should have the same url in both image_url and postthumb_image_url' do
+        random = Irasutoya::Irasuto.random
+        expect(random.image_url).to eq random.postthumb_image_url
+      end
+
+      it 'should tell if it has multiple images' do
+        expect(Irasutoya::Irasuto.random.has_multiple_images).to be_truthy
+      end
+
+      it 'should return array of urls' do
+        expect(Irasutoya::Irasuto.random.image_urls).to eq %w[
+          https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg
+          https://1.bp.blogspot.com/-lpfwBjUUF14/XpKjSWe30_I/AAAAAAABYV4/I1XfuuYWbKYmlscvIobYDlj64WItEsoVgCNcBGAsYHQ/s300/jitakutaiki_uchidesugosou.png
+          https://1.bp.blogspot.com/-SsQwk5T0cvw/XpKjR-QdEUI/AAAAAAABYVw/czkpHPV97JIuHJcUT-HBQMsmyd_6EAkRACNcBGAsYHQ/s300/jitakutaiki_ieniiyou.png
+          https://1.bp.blogspot.com/-ZJ6jMVFzmKc/XpKjSFJkAkI/AAAAAAABYV0/vc9fK33XvGsmQQU6bg74TbNpcwdfcKDpACNcBGAsYHQ/s300/jitakutaiki_stayhome.png
+        ]
+      end
     end
   end
 
