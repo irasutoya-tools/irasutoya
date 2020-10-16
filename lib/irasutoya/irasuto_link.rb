@@ -20,7 +20,7 @@ module Irasutoya
         url: show_url,
         title: parsed[:title],
         description: parsed[:description],
-        image_url: parsed[:image_url]
+        image_urls: parsed[:image_urls]
       )
     end
   end

@@ -6,13 +6,16 @@ module Irasutoya
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
 
-    attr_reader :url, :title, :description, :image_url
+    attr_reader :url, :title, :description, :image_urls, :postthumb_image_url, :image_url, :has_multiple_images
 
-    def initialize(url:, title:, description:, image_url:)
+    def initialize(url:, title:, description:, image_urls:)
       @url = url
       @title = title
       @description = description
-      @image_url = image_url
+      @image_urls = image_urls
+      @has_multiple_images = image_urls.size > 1
+      @postthumb_image_url = image_urls.first if @has_multiple_images
+      @image_url = image_urls.first
     end
 
     class << self
@@ -21,7 +24,7 @@ module Irasutoya
         document = fetch_page_and_parse(url)
         parsed = parse_show_page(document: document)
 
-        Irasuto.new(url: url, title: parsed[:title], description: parsed[:description], image_url: parsed[:image_url])
+        Irasuto.new(url: url, title: parsed[:title], description: parsed[:description], image_urls: parsed[:image_urls])
       end
 
       def search(query:, page: 0)
