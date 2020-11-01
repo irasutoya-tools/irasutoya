@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-RSpec.describe Irasutoya::IrasutoLink do
-  describe '#fetch_irasuto' do
+RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
+  describe '#fetch_irasuto' do # rubocop:disable Metrics/BlockLength
     let(:irasuto_link) { Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'http://example.com') }
 
     before do
