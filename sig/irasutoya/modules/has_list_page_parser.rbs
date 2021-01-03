@@ -1,0 +1,16 @@
+module Irasutoya
+  module Modules
+    module HasListPageParser
+      def self.included: (Class) -> void
+
+      module Methods
+        def parse_list_page: (document: untyped) -> Array[{ title: String, show_url: String }]
+      end
+
+      module PrivateMethods
+        def self.title_from: (box: untyped) -> String
+        def self.show_url_from: (box: untyped) -> String
+      end
+    end
+  end
+end

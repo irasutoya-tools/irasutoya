@@ -1,0 +1,13 @@
+module Irasutoya
+  class IrasutoLink
+    include Modules::HasDocumentFetcher::Methods
+    include Modules::HasShowPageParser::Methods
+    extend Modules::HasDocumentFetcher::Methods
+    extend Modules::HasShowPageParser::Methods
+
+    attr_reader title: String
+    attr_reader show_url: String
+    def initialize: (title: String, show_url: String) -> void
+    def fetch_irasuto: -> Irasuto
+  end
+end
