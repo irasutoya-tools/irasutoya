@@ -36,6 +36,15 @@ jobs:
       - *update_bundler
       - *bundle_install
       - run: bundle exec rubocop
+  steep:
+    docker:
+      - image: circleci/ruby:2.7.2
+    steps:
+      - checkout
+      - *restore_bundle_cache
+      - *update_bundler
+      - *bundle_install
+      - run: bundle exec steep check
   rspec:
     docker:
       - image: circleci/ruby:2.7.2
@@ -56,6 +65,8 @@ workflows:
     jobs:
       - build
       - rubocop:
+          requires: [build]
+      - steep:
           requires: [build]
       - rspec:
           requires: [build]

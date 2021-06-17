@@ -1,0 +1,3 @@
+module Irasutoya
+  VERSION: String
+end

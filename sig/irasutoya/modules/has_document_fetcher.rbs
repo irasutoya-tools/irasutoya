@@ -1,0 +1,11 @@
+module Irasutoya
+  module Modules
+    module HasDocumentFetcher
+      def self.included: (Class) -> void
+
+      module Methods
+        def fetch_page_and_parse: (String) -> untyped
+      end
+    end
+  end
+end

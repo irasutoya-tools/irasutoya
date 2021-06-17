@@ -1,0 +1,14 @@
+module Irasutoya
+  class Category
+    include Modules::HasDocumentFetcher::Methods
+    include Modules::HasListPageParser::Methods
+    extend Modules::HasDocumentFetcher::Methods
+    extend Modules::HasListPageParser::Methods
+
+    attr_reader list_url: String
+    attr_reader title: String
+    def initialize: (title: String, list_url: String) -> void
+    def self.all: -> Array[Category]
+    def fetch_irasuto_links: -> Array[IrasutoLink]
+  end
+end
