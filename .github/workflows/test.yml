@@ -3,7 +3,21 @@ name: test
 on: [push]
 
 jobs:
-  build:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.2
+      - name: Install bundler
+        run: gem install bundler
+      - name: Install dependencies
+        run: bundle install --jobs 4
+      - name: Run lint
+        run: bundle exec rubocop lib
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
