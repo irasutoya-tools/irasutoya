@@ -1,11 +1,11 @@
 # Irasutoya
 
 [![Gem Version](https://badge.fury.io/rb/irasutoya.svg)](https://badge.fury.io/rb/irasutoya)
-[![Code Climate](https://codeclimate.com/github/unhappychoice/irasutoya/badges/gpa.svg)](https://codeclimate.com/github/unhappychoice/irasutoya)
-[![codecov](https://codecov.io/gh/unhappychoice/irasutoya/branch/master/graph/badge.svg)](https://codecov.io/gh/unhappychoice/irasutoya)
-[![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/unhappychoice/irasutoya.svg)](https://libraries.io/github/unhappychoice/irasutoya)
+[![Code Climate](https://codeclimate.com/github/irasutoya-tools/irasutoya/badges/gpa.svg)](https://codeclimate.com/github/irasutoya-tools/irasutoya)
+[![codecov](https://codecov.io/gh/irasutoya-tools/irasutoya/branch/master/graph/badge.svg)](https://codecov.io/gh/irasutoya-tools/irasutoya)
+[![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/irasutoya-tools/irasutoya.svg)](https://libraries.io/github/irasutoya-tools/irasutoya)
 ![](http://ruby-gem-downloads-badge.herokuapp.com/irasutoya?type=total)
-![GitHub](https://img.shields.io/github/license/unhappychoice/irasutoya.svg)
+![GitHub](https://img.shields.io/github/license/irasutoya-tools/irasutoya.svg)
 
 <p align="center">
   <img src="https://1.bp.blogspot.com/-QU1PrEXerMg/XWS5ZxD-tsI/AAAAAAABUR4/1EuTP776BowewKdMAgnAUpUB5m3O7ve-ACLcBGAs/s1600/computer_screen_programming.png" width="400"/>
@@ -53,7 +53,7 @@ irasuto = irasuto_link.fetch_irasuto #=> returns Irasuto instance
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/unhappychoice/irasutoya. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+Bug reports and pull requests are welcome on GitHub at https://github.com/irasutoya-tools/irasutoya. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 ## License
 
@@ -61,4 +61,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the Irasutoya project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/unhappychoice/irasutoya/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the Irasutoya project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/irasutoya-tools/irasutoya/blob/master/CODE_OF_CONDUCT.md).
