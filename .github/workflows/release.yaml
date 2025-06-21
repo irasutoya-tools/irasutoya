@@ -1,4 +1,4 @@
-name: test
+name: release
 
 on:
   workflow_dispatch:
@@ -27,6 +27,10 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: .ruby-version
+      - name: Setup Git
+        run:
+          git config --global user.email "unhappychoice@gmail.com"
+          git config --global user.name "unhappychoice"
       - name: Install gem-release
         run: gem install gem-release
       - name: Bump version
