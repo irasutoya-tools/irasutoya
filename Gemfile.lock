@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    irasutoya (1.1.0)
+    irasutoya (2.0.0)
       nokogiri
 
 GEM
