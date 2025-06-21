@@ -35,7 +35,9 @@ jobs:
         run: gem install gem-release
       - name: Bump version
         run: |
+          git status
           gem bump --version ${{inputs.version}} --message ':tada: Bump %{name} to %{version}'
+          git status
           bundle config set frozen false 
           bundle install
           git add .
