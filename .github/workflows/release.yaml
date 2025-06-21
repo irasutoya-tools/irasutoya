@@ -1,0 +1,34 @@
+name: test
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version
+        required: true
+        type: choice
+        options:
+           - major
+           - minor
+           - patch
+jobs:
+  push:
+    name: Push gem to RubyGems.org
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: .ruby-version
+      - name: Install gem-release
+        run: gem install gem-release
+      - name: Bump version
+        run: "gem bump --version ${{inputs.version}} --message ':tada: Bump %{name} to %{version}'"
+      - uses: rubygems/release-gem@v1
