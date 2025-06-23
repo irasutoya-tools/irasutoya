@@ -23,7 +23,7 @@ GEM
     ast (2.4.2)
     base64 (0.2.0)
     benchmark (0.4.0)
-    bigdecimal (3.1.9)
+    bigdecimal (3.2.2)
     codecov (0.6.0)
       simplecov (>= 0.15, < 0.22)
     coderay (1.1.3)
