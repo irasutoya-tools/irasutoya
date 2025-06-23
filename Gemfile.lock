@@ -22,7 +22,7 @@ GEM
       uri (>= 0.13.1)
     ast (2.4.2)
     base64 (0.2.0)
-    benchmark (0.4.0)
+    benchmark (0.4.1)
     bigdecimal (3.1.9)
     codecov (0.6.0)
       simplecov (>= 0.15, < 0.22)
