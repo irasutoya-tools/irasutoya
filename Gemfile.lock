@@ -34,7 +34,7 @@ GEM
     drb (2.2.3)
     ffi (1.17.2)
     fileutils (1.7.3)
-    formatador (1.2.1)
+    formatador (1.2.2)
       reline
     guard (2.19.1)
       formatador (>= 0.2.4)
