@@ -34,7 +34,7 @@ GEM
     drb (2.2.3)
     ffi (1.17.2)
     fileutils (1.8.0)
-    formatador (1.2.2)
+    formatador (1.2.3)
       reline
     guard (2.19.1)
       formatador (>= 0.2.4)
@@ -95,7 +95,7 @@ GEM
     rbs (3.9.5)
       logger
     regexp_parser (2.11.3)
-    reline (0.6.2)
+    reline (0.6.3)
       io-console (~> 0.5)
     rspec (3.13.2)
       rspec-core (~> 3.13.0)
