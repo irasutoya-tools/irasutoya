@@ -68,7 +68,7 @@ GEM
     lumberjack (1.4.2)
     method_source (1.1.0)
     mini_portile2 (2.8.9)
-    minitest (5.26.2)
+    minitest (5.27.0)
     mutex_m (0.3.0)
     nenv (0.3.0)
     nokogiri (1.18.10)
