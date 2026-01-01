@@ -32,7 +32,7 @@ GEM
     diff-lcs (1.6.2)
     docile (1.4.1)
     drb (2.2.3)
-    ffi (1.17.2)
+    ffi (1.17.3)
     fileutils (1.8.0)
     formatador (1.2.3)
       reline
