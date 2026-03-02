@@ -37,5 +37,8 @@ jobs:
         env:
           RAILS_ENV: test
           COVERAGE: true
-          CODECOV_TOKEN: 3786990f-aaba-4bc7-8a14-dcaac1d22749
         run: bundle exec rspec
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
