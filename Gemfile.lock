@@ -95,7 +95,7 @@ GEM
     rbs (3.10.4)
       logger
       tsort
-    regexp_parser (2.11.3)
+    regexp_parser (2.12.0)
     reline (0.6.3)
       io-console (~> 0.5)
     rspec (3.13.2)
