@@ -10,3 +10,9 @@ updates:
     allow:
       - dependency-type: direct
       - dependency-type: indirect
+    ignore:
+      # steep 2.0+ requires Ruby >= 3.2, but our gemspec keeps Ruby 3.1
+      # support. Pin to steep 1.x until we drop Ruby 3.1.
+      - dependency-name: steep
+        update-types:
+          - version-update:semver-major
