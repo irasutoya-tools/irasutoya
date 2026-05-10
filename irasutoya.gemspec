@@ -7,7 +7,7 @@ require 'irasutoya/version'
 Gem::Specification.new do |spec|
   spec.name          = 'irasutoya'
   spec.version       = Irasutoya::VERSION
-  spec.required_ruby_version = '>= 3.1'
+  spec.required_ruby_version = '>= 3.2'
   spec.authors       = ['Yuji Ueki']
   spec.email         = ['unhappychoice@gmail.com']
 
