@@ -18,6 +18,7 @@ module Irasutoya
     def initialize: (url: String, title: String, description: String, image_urls: Array[String]) -> void
     def self.random: -> Irasuto
     def self.search: (query: String, ?page: Integer) -> Array[IrasutoLink]
+    private def self.fetch_search_page: (String, Integer) -> untyped
     def self.random_api_path: -> String
     def self.random_url: -> String
   end

@@ -28,19 +28,29 @@ module Irasutoya
       end
 
       def search(query:, page: 0)
-        url = if page.zero?
-                "https://www.irasutoya.com/search?q=#{CGI.escape query}"
-              else
-                "https://www.irasutoya.com/search?q=#{CGI.escape query}&max-results=20&start=#{page * 20}&by-date=false"
-              end
+        url = "https://www.irasutoya.com/search?q=#{CGI.escape query}"
+        document = fetch_search_page(url, page)
+        return [] unless document
 
-        document = fetch_page_and_parse(url)
         parse_list_page(document: document).map do |parsed|
           IrasutoLink.new(title: parsed[:title], show_url: parsed[:show_url])
         end
       end
 
       private
+
+      def fetch_search_page(url, page)
+        document = fetch_page_and_parse(url)
+        page.times do
+          next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
+          return nil if next_href.nil? || next_href.empty?
+
+          url = URI.join(url, next_href).to_s
+          document = fetch_page_and_parse(url)
+        end
+
+        document
+      end
 
       def random_api_path
         max_index = 22_208
