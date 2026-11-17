@@ -9,7 +9,17 @@ end
 require 'bundler/setup'
 require 'irasutoya'
 
+module ResponseFixtures
+  def stub_html_fixture(filename)
+    allow(Irasutoya::ResponseFetcher).to receive(:get)
+      .with(anything, max_bytes: Irasutoya::Modules::HasDocumentFetcher::MAX_HTML_BYTES)
+      .and_return([File.binread("spec/files/#{filename}"), 'text/html; charset="UTF-8"'])
+  end
+end
+
 RSpec.configure do |config|
+  config.include ResponseFixtures
+
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = '.rspec_status'
 

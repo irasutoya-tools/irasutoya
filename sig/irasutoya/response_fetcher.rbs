@@ -1,0 +1,14 @@
+module Irasutoya
+  class ResponseTooLargeError < StandardError
+  end
+
+  module ResponseFetcher
+    REDIRECT_CODES: Array[String]
+    MAX_REDIRECTS: Integer
+
+    def self.get: (String, max_bytes: Integer) -> [String, String?]
+    private def self.request: (URI::HTTP, Integer) -> ([String, String?] | String)
+    private def self.redirect_uri: (URI::HTTP, String) -> URI::HTTP
+    private def self.read_body: (Net::HTTPResponse, Integer) -> String
+  end
+end

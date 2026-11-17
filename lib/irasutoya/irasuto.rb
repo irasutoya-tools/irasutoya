@@ -6,6 +6,8 @@ module Irasutoya
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
 
+    MAX_FEED_BYTES = 1024 * 1024
+
     attr_reader :url, :title, :description, :image_urls, :postthumb_image_url, :image_url, :has_multiple_images
 
     def initialize(url:, title:, description:, image_urls:)
@@ -49,7 +51,7 @@ module Irasutoya
       end
 
       def random_url
-        jsonp = Net::HTTP.get(URI.parse("https://www.irasutoya.com#{random_api_path}"))
+        jsonp, = ResponseFetcher.get("https://www.irasutoya.com#{random_api_path}", max_bytes: MAX_FEED_BYTES)
         JSON.parse(jsonp[/{.+}/]) # rubocop:disable Style/SingleArgumentDig
             .dig('feed', 'entry')
             .first
