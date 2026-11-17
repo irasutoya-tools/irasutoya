@@ -3,7 +3,7 @@
 RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#random' do # rubocop:disable Metrics/BlockLength
     before do
-      allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
+      allow(URI).to receive(:open).and_return(File.read('spec/files/posts_summary.jsonp'))
       allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
     end
 

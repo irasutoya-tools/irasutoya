@@ -20,11 +20,14 @@ module Irasutoya
 
     class << self
       def random
-        url = random_url
-        document = fetch_page_and_parse(url)
-        parsed = parse_show_page(document: document)
+        with_fetch_timeout do
+          url = random_url
+          parsed = parse_show_page(document: read_document(url))
 
-        Irasuto.new(url: url, title: parsed[:title], description: parsed[:description], image_urls: parsed[:image_urls])
+          Irasuto.new(
+            url: url, title: parsed[:title], description: parsed[:description], image_urls: parsed[:image_urls]
+          )
+        end
       end
 
       def search(query:, page: 0)
@@ -49,7 +52,7 @@ module Irasutoya
       end
 
       def random_url
-        jsonp = Net::HTTP.get(URI.parse("https://www.irasutoya.com#{random_api_path}"))
+        jsonp = URI.open("https://www.irasutoya.com#{random_api_path}", &:read)
         JSON.parse(jsonp[/{.+}/]) # rubocop:disable Style/SingleArgumentDig
             .dig('feed', 'entry')
             .first
