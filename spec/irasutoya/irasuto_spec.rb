@@ -69,27 +69,23 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
   describe '#search' do
     let(:query) { '検索' }
-    let(:expected) do
-      %w[
-        「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
-        親戚づきあいが苦手な人のイラスト（男性） 親戚の集まりのイラスト お汁粉のイラスト 日の出に照らされるぴょこのイラスト
-        電子マネー対応の賽銭箱のイラスト（QRコード） 懐中しるこのイラスト 二人羽織のイラスト（女性）
-        獅子舞に頭を噛まれる人のイラスト（女性） 獅子舞に頭を噛まれる人のイラスト（男性） お正月のライン素材（亥年）
-        「2019」のイラスト文字 和服を着た高齢の女性のイラスト 和服を着た高齢の男性のイラスト 和服を着た中年女性のイラスト
-        和服を着た中年男性のイラスト 書き初めをする猪のイラスト（亥年） 福袋を持った猪のイラスト（亥年）
-      ]
-    end
+    let(:results) { described_class.search(query: query) }
 
     before do
       allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
     end
 
-    it 'should return irasuto links' do
-      expect(Irasutoya::Irasuto.search(query: query).size).to eq 20
-    end
+    include_examples 'ordered list results'
 
-    it 'should return irasutos' do
-      expect(Irasutoya::Irasuto.search(query: query).map(&:title)).to eq expected
+    it 'queries anchors once in each of the twenty result boxes' do
+      document = Nokogiri::HTML.parse(File.read('spec/files/list.html'))
+      boxes = document.css('.box')
+      expect(boxes.size).to eq(20)
+      allow(described_class).to receive(:fetch_page_and_parse).and_return(document)
+      allow(document).to receive(:css).with('.box').and_return(boxes)
+      boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
+
+      results
     end
   end
 end
