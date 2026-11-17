@@ -39,7 +39,8 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   end
 
   describe '#fetch_irasuto_links' do
-    let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: 'https://www.irasutoya.com/search/label/お正月') }
+    let(:list_url) { 'https://www.irasutoya.com/search/label/%E3%81%8A%E6%AD%A3%E6%9C%88' }
+    let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: list_url) }
     let(:expected) do
       %w[
         「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
@@ -52,7 +53,8 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      response = double('HTTP response', charset: 'UTF-8', read: File.read('spec/files/list.html'))
+      allow(OpenURI).to receive(:open_uri).with(URI.parse(list_url)).and_yield(response)
     end
 
     it 'should return irasuto links' do
