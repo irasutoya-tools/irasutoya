@@ -2,9 +2,55 @@
 
 RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#random' do # rubocop:disable Metrics/BlockLength
+    let(:feed_body) { File.read('spec/files/posts_summary.jsonp') }
+    let(:feed_count) { 22_312 }
+    let(:feed_response) do
+      Net::HTTPOK.new('1.1', '200', 'OK').tap do |response|
+        allow(response).to receive(:body).and_return(feed_body)
+      end
+    end
+    let(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
+
     before do
-      allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
+      allow(Random).to receive(:rand).with(feed_count).and_return(0)
+      allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(feed_response)
+      allow(URI).to receive(:parse).and_call_original
+      allow(URI).to receive(:parse).with(show_uri.to_s).and_return(show_uri)
+      allow(show_uri).to receive(:open).and_return(File.read('spec/files/show.html'))
+    end
+
+    def feed_uri(index)
+      URI.parse("https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script")
+    end
+
+    it 'returns the first entry for a draw of zero without requesting index zero' do
+      expect(Net::HTTP).to receive(:get_response).with(feed_uri(1)).once.and_return(feed_response)
+
+      expect(described_class.random.url).to eq(show_uri.to_s)
+    end
+
+    it 'requests the last reported index for the highest draw' do
+      allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
+      expect(Net::HTTP).to receive(:get_response).with(feed_uri(feed_count)).and_return(feed_response)
+
+      expect(described_class.random.url).to eq(show_uri.to_s)
+    end
+
+    it 'raises an HTTP error before parsing a failed count response' do
+      response = Net::HTTPBadRequest.new('1.1', '400', 'Bad Request')
+      allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(response)
+      expect(response).not_to receive(:body)
+
+      expect { described_class.random }.to raise_error(Net::HTTPClientException, /400.*Bad Request/)
+    end
+
+    it 'raises an HTTP error before parsing a failed entry response' do
+      response = Net::HTTPServiceUnavailable.new('1.1', '503', 'Service Unavailable')
+      allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
+      allow(Net::HTTP).to receive(:get_response).with(feed_uri(feed_count)).and_return(response)
+      expect(response).not_to receive(:body)
+
+      expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
     end
 
     it 'should return random irasuto' do
@@ -37,9 +83,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     context 'when there are multiple images on a page' do
       before do
-        allow(URI).to receive_message_chain(:parse, :open) {
-          File.read('spec/files/show_multiple_images.html')
-        }
+        allow(show_uri).to receive(:open).and_return(File.read('spec/files/show_multiple_images.html'))
       end
 
       it 'should return random irasuto with image_url' do
