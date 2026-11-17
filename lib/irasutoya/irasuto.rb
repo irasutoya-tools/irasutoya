@@ -6,16 +6,29 @@ module Irasutoya
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
 
-    attr_reader :url, :title, :description, :image_urls, :postthumb_image_url, :image_url, :has_multiple_images
+    attr_reader :url, :title, :description
 
     def initialize(url:, title:, description:, image_urls:)
       @url = url
       @title = title
       @description = description
-      @image_urls = image_urls
-      @has_multiple_images = image_urls.size > 1
-      @postthumb_image_url = image_urls.first if @has_multiple_images
-      @image_url = image_urls.first
+      @image_urls = image_urls.dup
+    end
+
+    def image_urls
+      @image_urls.dup
+    end
+
+    def image_url
+      @image_urls.first
+    end
+
+    def postthumb_image_url
+      image_url if has_multiple_images
+    end
+
+    def has_multiple_images # rubocop:disable Naming/PredicateMethod, Naming/PredicatePrefix
+      @image_urls.size > 1
     end
 
     class << self
