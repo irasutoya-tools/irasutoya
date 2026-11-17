@@ -4,7 +4,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#random' do # rubocop:disable Metrics/BlockLength
     before do
       allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
+      stub_html_response('show.html')
     end
 
     it 'should return random irasuto' do
@@ -37,9 +37,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     context 'when there are multiple images on a page' do
       before do
-        allow(URI).to receive_message_chain(:parse, :open) {
-          File.read('spec/files/show_multiple_images.html')
-        }
+        stub_html_response('show_multiple_images.html')
       end
 
       it 'should return random irasuto with image_url' do
@@ -81,7 +79,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      stub_html_response('list.html')
     end
 
     it 'should return irasuto links' do

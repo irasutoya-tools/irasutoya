@@ -3,7 +3,7 @@
 RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   describe '#all' do # rubocop:disable Metrics/BlockLength
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/index.html') }
+      stub_html_response('index.html')
     end
 
     let(:expected) do
@@ -52,7 +52,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      stub_html_response('list.html')
     end
 
     it 'should return irasuto links' do

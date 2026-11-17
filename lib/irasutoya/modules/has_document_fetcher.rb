@@ -11,12 +11,9 @@ module Irasutoya
 
       module Methods
         def fetch_page_and_parse(url)
-          charset = nil
-          html = URI.parse(url).open do |f|
-            charset = f.charset
-            f.read
+          URI.parse(url).open do |response|
+            Nokogiri::HTML.parse(response, nil, response.charset)
           end
-          Nokogiri::HTML.parse(html, nil, charset)
         end
       end
     end
