@@ -4,7 +4,15 @@ module Irasutoya
       def self.included: (Class) -> void
 
       module Methods
+        TRUSTED_HOST: String
+        MAX_REDIRECTS: Integer
+
         def fetch_page_and_parse: (String) -> untyped
+
+        private
+
+        def fetch_trusted_page: (untyped, Integer) -> untyped
+        def trusted_page_uri: (untyped) -> untyped
       end
     end
   end

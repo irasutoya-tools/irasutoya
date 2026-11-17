@@ -2,9 +2,13 @@
 
 RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#random' do # rubocop:disable Metrics/BlockLength
+    let(:feed) { File.read('spec/files/posts_summary.jsonp') }
+    let(:page_fixture) { 'show.html' }
+    let(:page_http) { stub_page(page_fixture) }
+
     before do
-      allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
+      allow(Net::HTTP).to receive(:get).and_return(feed)
+      page_http
     end
 
     it 'should return random irasuto' do
@@ -13,6 +17,20 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     it 'should return random irasuto with url' do
       expect(Irasutoya::Irasuto.random.url).to eq('http://www.irasutoya.com/2014/03/blog-post_5924.html')
+    end
+
+    it 'fetches the legacy feed link over HTTPS' do
+      Irasutoya::Irasuto.random
+
+      expect(page_http.use_ssl?).to be(true)
+      expect(page_http).to have_received(:request).with(have_attributes(path: '/2014/03/blog-post_5924.html'))
+    end
+
+    it 'rejects an off-origin feed link before opening a page connection' do
+      allow(Net::HTTP).to receive(:get).and_return(feed.gsub('www.irasutoya.com', 'example.com'))
+      expect(Net::HTTP).not_to receive(:new)
+
+      expect { Irasutoya::Irasuto.random }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
     end
 
     it 'should return random irasuto with title' do
@@ -36,11 +54,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     context 'when there are multiple images on a page' do
-      before do
-        allow(URI).to receive_message_chain(:parse, :open) {
-          File.read('spec/files/show_multiple_images.html')
-        }
-      end
+      let(:page_fixture) { 'show_multiple_images.html' }
 
       it 'should return random irasuto with image_url' do
         expect(Irasutoya::Irasuto.random.image_url).to eq('https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg')
@@ -81,7 +95,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      stub_page('list.html')
     end
 
     it 'should return irasuto links' do
