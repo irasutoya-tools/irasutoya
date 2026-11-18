@@ -21,6 +21,8 @@ gem 'irasutoya'
 ```
 ## Usage
 
+Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
+
 ```ruby
 # Irasuto
 irasuto = Irasutoya::Irasuto.random #=> returns Irasuto instance

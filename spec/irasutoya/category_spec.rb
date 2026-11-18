@@ -41,35 +41,20 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   describe '#fetch_irasuto_links' do
     let(:list_url) { 'https://www.irasutoya.com/search/label/%E3%81%8A%E6%AD%A3%E6%9C%88' }
     let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: list_url) }
-    let(:expected) do
-      %w[
-        「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
-        親戚づきあいが苦手な人のイラスト（男性） 親戚の集まりのイラスト お汁粉のイラスト 日の出に照らされるぴょこのイラスト
-        電子マネー対応の賽銭箱のイラスト（QRコード） 懐中しるこのイラスト 二人羽織のイラスト（女性）
-        獅子舞に頭を噛まれる人のイラスト（女性） 獅子舞に頭を噛まれる人のイラスト（男性） お正月のライン素材（亥年）
-        「2019」のイラスト文字 和服を着た高齢の女性のイラスト 和服を着た高齢の男性のイラスト 和服を着た中年女性のイラスト
-        和服を着た中年男性のイラスト 書き初めをする猪のイラスト（亥年） 福袋を持った猪のイラスト（亥年）
-      ]
-    end
+    let(:results) { category.fetch_irasuto_links }
 
     before do
       stub_html_response('list.html', url: list_url)
     end
 
-    it 'should return irasuto links' do
-      expect(category.fetch_irasuto_links.size).to eq 20
-    end
+    include_examples 'ordered list results'
 
     it 'loads links from the category URL with their detail URLs' do
-      link = category.fetch_irasuto_links.first
+      link = results.first
 
       expect(OpenURI).to have_received(:open_uri).with(URI.parse(list_url)).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
-    end
-
-    it 'should return irasutos' do
-      expect(category.fetch_irasuto_links.map(&:title)).to eq expected
     end
   end
 end

@@ -8,6 +8,7 @@ end
 
 require 'bundler/setup'
 require 'irasutoya'
+require_relative 'support/ordered_list_results'
 
 module HtmlResponseHelpers
   def stub_html_response(fixture, url: nil)
