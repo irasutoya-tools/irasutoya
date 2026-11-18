@@ -4,7 +4,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#random' do # rubocop:disable Metrics/BlockLength
     before do
       allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
+      stub_http_document('show.html')
     end
 
     it 'should return random irasuto' do
@@ -15,7 +15,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       irasuto = Irasutoya::Irasuto.random
       url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
 
-      expect(URI).to have_received(:parse).with(url).once
+      expect(http_document).to have_received(:open).with(URI.parse(url)).once
       expect(irasuto.url).to eq(url)
     end
 
@@ -41,9 +41,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     context 'when there are multiple images on a page' do
       before do
-        allow(URI).to receive_message_chain(:parse, :open) {
-          File.read('spec/files/show_multiple_images.html')
-        }
+        stub_http_document('show_multiple_images.html')
       end
 
       it 'should return random irasuto with image_url' do
@@ -85,7 +83,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      stub_http_document('list.html')
     end
 
     it 'should return irasuto links' do
@@ -100,7 +98,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       link = Irasutoya::Irasuto.search(query: query, page: 2).first
       url = 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2&max-results=20&start=40&by-date=false'
 
-      expect(URI).to have_received(:parse).with(url).once
+      expect(http_document).to have_received(:open).with(URI.parse(url)).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end

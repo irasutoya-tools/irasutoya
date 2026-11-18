@@ -20,3 +20,16 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 end
+
+module HttpDocumentFixtures
+  def http_document
+    Irasutoya::Modules::HasDocumentFetcher.const_get(:HTTP_DOCUMENT)
+  end
+
+  def stub_http_document(fixture)
+    document = double('HTTP document', charset: 'UTF-8', read: File.read("spec/files/#{fixture}"))
+    allow(http_document).to receive(:open).and_yield(document)
+  end
+end
+
+RSpec.configure { |config| config.include HttpDocumentFixtures }

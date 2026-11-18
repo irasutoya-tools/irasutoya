@@ -3,7 +3,7 @@
 RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   describe '#all' do # rubocop:disable Metrics/BlockLength
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/index.html') }
+      stub_http_document('index.html')
     end
 
     let(:expected) do
@@ -53,8 +53,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
 
     before do
-      response = double('HTTP response', charset: 'UTF-8', read: File.read('spec/files/list.html'))
-      allow(OpenURI).to receive(:open_uri).with(URI.parse(list_url)).and_yield(response)
+      stub_http_document('list.html')
     end
 
     it 'should return irasuto links' do
@@ -64,7 +63,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     it 'loads links from the category URL with their detail URLs' do
       link = category.fetch_irasuto_links.first
 
-      expect(URI).to have_received(:parse).with(category.list_url).once
+      expect(http_document).to have_received(:open).with(URI.parse(category.list_url)).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end

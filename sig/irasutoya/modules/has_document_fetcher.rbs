@@ -5,7 +5,47 @@ module Irasutoya
 
       module Methods
         def fetch_page_and_parse: (String) -> untyped
+
+        private
+
+        def parse_document: (untyped) -> untyped
       end
+
+      class HttpDocument
+        REDIRECT_CODES: Array[String]
+        MAX_REDIRECTS: Integer
+        @session: HttpSession
+
+        def open: [Result] (untyped) { (untyped) -> Result } -> Result
+        def initialize: (HttpSession) -> void
+
+        private
+
+        def track_redirect: (untyped, Hash[untyped, bool], untyped) -> void
+        def redirect: (untyped, untyped, untyped) -> untyped
+        def response_document: (untyped, untyped) -> untyped
+      end
+
+      class HttpSession
+        IDLE_TIMEOUT: Float
+        @lock: Mutex
+        @key: [Integer, String, String, Integer]?
+        @http: untyped
+        @idle_since: Float
+        @reaper: Thread?
+
+        def get: (untyped) -> untyped
+        def initialize: () -> void
+
+        private
+
+        def session_for: (untyped) -> untyped
+        def close_when_idle: () -> void
+        def remaining_idle_time: () -> Float
+        def monotonic_time: () -> Float
+      end
+
+      HTTP_DOCUMENT: HttpDocument
     end
   end
 end
