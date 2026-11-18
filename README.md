@@ -2,7 +2,6 @@
 
 [![Gem Version](https://badge.fury.io/rb/irasutoya.svg)](https://badge.fury.io/rb/irasutoya)
 [![Code Climate](https://codeclimate.com/github/irasutoya-tools/irasutoya/badges/gpa.svg)](https://codeclimate.com/github/irasutoya-tools/irasutoya)
-[![codecov](https://codecov.io/gh/irasutoya-tools/irasutoya/branch/master/graph/badge.svg)](https://codecov.io/gh/irasutoya-tools/irasutoya)
 [![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/irasutoya-tools/irasutoya.svg)](https://libraries.io/github/irasutoya-tools/irasutoya)
 ![](http://ruby-gem-downloads-badge.herokuapp.com/irasutoya?type=total)
 ![GitHub](https://img.shields.io/github/license/irasutoya-tools/irasutoya.svg)
