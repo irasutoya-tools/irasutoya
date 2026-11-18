@@ -10,16 +10,18 @@ module Irasutoya
     attr_reader url: String
     attr_reader title: String
     attr_reader description: String
-    attr_reader image_urls: Array[String]
-    attr_reader postthumb_image_url: String?
-    attr_reader image_url: String?
-    attr_reader has_multiple_images: bool
+
+    @image_urls: Array[String]
+
+    def image_urls: -> Array[String]
+    def image_url: -> String?
+    def postthumb_image_url: -> String?
+    def has_multiple_images: -> bool
 
     def initialize: (url: String, title: String, description: String, image_urls: Array[String]) -> void
     def self.random: -> Irasuto
     def self.search: (query: String, ?page: Integer) -> Array[IrasutoLink]
-    private def self.fetch_search_page: (String, Integer) -> untyped
-    def self.random_api_path: -> String
+    def self.fetch_feed: (Integer) -> Hash[String, untyped]
     def self.random_url: -> String
   end
 end
