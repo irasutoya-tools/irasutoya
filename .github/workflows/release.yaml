@@ -31,15 +31,15 @@ jobs:
         run: |
           git config --global user.email "unhappychoice@gmail.com"
           git config --global user.name "Yuji Ueki"
-      - name: Install gem-release
-        run: gem install gem-release
       - name: Bump version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           git status
-          gem bump --version ${{inputs.version}} --message ':tada: Bump %{name} to %{version}'
+          BUNDLE_FROZEN=true bundle exec gem bump --version "$RELEASE_VERSION" --message ':tada: Bump %{name} to %{version}'
           git status
-          bundle config set frozen false 
-          bundle install
+          bundle config set frozen false
+          bundle install --local
           git add .
           git commit --amend --no-edit
       - uses: rubygems/release-gem@v1
