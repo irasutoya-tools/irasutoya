@@ -10,10 +10,14 @@ require 'bundler/setup'
 require 'irasutoya'
 
 module ResponseFixtures
-  def stub_html_fixture(filename)
+  def stub_html_fixture(filename, url: anything)
     allow(Irasutoya::ResponseFetcher).to receive(:get)
-      .with(anything, max_bytes: Irasutoya::Modules::HasDocumentFetcher::MAX_HTML_BYTES)
+      .with(url, max_bytes: html_byte_limit)
       .and_return([File.binread("spec/files/#{filename}"), 'text/html; charset="UTF-8"'])
+  end
+
+  def html_byte_limit
+    Irasutoya::Modules::HasDocumentFetcher::MAX_HTML_BYTES
   end
 end
 

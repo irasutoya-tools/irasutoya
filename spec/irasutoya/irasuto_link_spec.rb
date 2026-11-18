@@ -13,7 +13,10 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
     end
 
     it 'should return irasuto with url' do
-      expect(irasuto_link.fetch_irasuto.url).to eq('http://example.com')
+      irasuto = irasuto_link.fetch_irasuto
+
+      expect(Irasutoya::ResponseFetcher).to have_received(:get).with(irasuto_link.show_url, max_bytes: html_byte_limit).once
+      expect(irasuto.url).to eq(irasuto_link.show_url)
     end
 
     it 'should return irasuto with title' do

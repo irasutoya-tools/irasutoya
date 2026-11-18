@@ -28,10 +28,7 @@ module Irasutoya
     end
 
     def fetch_irasuto_links
-      document = fetch_page_and_parse(list_url)
-      parse_list_page(document: document).map do |parsed|
-        IrasutoLink.new(title: parsed[:title], show_url: parsed[:show_url])
-      end
+      PageLoader.load_list(list_url)
     end
   end
 end
