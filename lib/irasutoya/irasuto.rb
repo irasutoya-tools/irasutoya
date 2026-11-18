@@ -35,21 +35,21 @@ module Irasutoya
 
       private
 
-      def random_api_path
-        max_index = 22_208
-        luck = Random.rand(max_index)
-        "/feeds/posts/summary?start-index=#{luck}&max-results=1&alt=json-in-script"
+      def fetch_feed(index)
+        url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
+        response = Net::HTTP.get_response(URI.parse(url))
+        response.value
+        JSON.parse(response.body[/{.+}/]).fetch('feed')
       end
 
       def random_url
-        jsonp = Net::HTTP.get(URI.parse("https://www.irasutoya.com#{random_api_path}"))
-        JSON.parse(jsonp[/{.+}/]) # rubocop:disable Style/SingleArgumentDig
-            .dig('feed', 'entry')
-            .first
-            .dig('link')
-            .select { |link| link['rel'] == 'alternate' }
-            .first
-            .dig('href')
+        feed = fetch_feed(1)
+        count = Integer(feed.dig('openSearch$totalResults', '$t'), 10)
+        raise 'Illustration feed has no entries' if count.zero?
+
+        index = Random.rand(count) + 1
+        feed = fetch_feed(index) unless index == 1
+        feed.fetch('entry').first.fetch('link').find { |link| link['rel'] == 'alternate' }.fetch('href')
       end
     end
   end
