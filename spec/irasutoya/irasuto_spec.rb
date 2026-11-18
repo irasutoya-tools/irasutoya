@@ -12,7 +12,11 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     it 'should return random irasuto with url' do
-      expect(Irasutoya::Irasuto.random.url).to eq('http://www.irasutoya.com/2014/03/blog-post_5924.html')
+      irasuto = Irasutoya::Irasuto.random
+      url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
+
+      expect(URI).to have_received(:parse).with(url).once
+      expect(irasuto.url).to eq(url)
     end
 
     it 'should return random irasuto with title' do
@@ -67,7 +71,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
   end
 
-  describe '#search' do
+  describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
     let(:expected) do
       %w[
@@ -90,6 +94,15 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     it 'should return irasutos' do
       expect(Irasutoya::Irasuto.search(query: query).map(&:title)).to eq expected
+    end
+
+    it 'loads links from the paginated search URL with their detail URLs' do
+      link = Irasutoya::Irasuto.search(query: query, page: 2).first
+      url = 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2&max-results=20&start=40&by-date=false'
+
+      expect(URI).to have_received(:parse).with(url).once
+      expect(link).to be_a(Irasutoya::IrasutoLink)
+      expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end
   end
 end
