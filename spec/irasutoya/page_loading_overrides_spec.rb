@@ -52,7 +52,10 @@ RSpec.describe 'Page loading overrides' do
     let(:illustration) { receiver.random }
 
     before do
-      allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
+      response = Net::HTTPOK.new('1.1', '200', 'OK')
+      allow(response).to receive(:body).and_return(File.read('spec/files/posts_summary.jsonp'))
+      allow(Net::HTTP).to receive(:get_response).and_return(response)
+      allow(Random).to receive(:rand).with(22_312).and_return(0)
     end
 
     include_examples 'detail loading with receiver overrides'
