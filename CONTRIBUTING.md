@@ -1,0 +1,29 @@
+# Contributing
+
+Bug reports and pull requests are welcome. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) when participating.
+
+## Set up your development environment
+
+Fork the repository on GitHub and clone your fork. Use the Ruby version in [`.ruby-version`](.ruby-version), then install the Bundler version listed under `BUNDLED WITH` in [`Gemfile.lock`](Gemfile.lock) if needed. From the repository root, install the development dependencies.
+
+```sh
+bundle install --jobs 4
+```
+
+## Run the checks
+
+Run the same test and lint commands used by [CI](.github/workflows/test.yml).
+
+```sh
+bundle exec rspec
+bundle exec rubocop lib
+```
+
+The scraping specs use saved HTML and feed responses in [`spec/files/`](spec/files/). When changing a parser, update or add a fixture and a spec if needed to cover the behavior.
+
+## Open a pull request
+
+1. Create a branch from the upstream `master` branch.
+2. Make a focused change and run the checks above.
+3. Commit with a Conventional Commit subject, such as `docs: clarify installation`.
+4. Push your branch to your fork and open a pull request against `irasutoya-tools/irasutoya:master`. Describe what changed, why, and which checks you ran. Link a related issue if there is one.

@@ -21,9 +21,9 @@ jobs:
       id-token: write
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@4e97ecde5048e1e0816923020652678063ffbf65 # v1
         with:
           bundler-cache: true
           ruby-version: .ruby-version
@@ -42,4 +42,4 @@ jobs:
           bundle install
           git add .
           git commit --amend --no-edit
-      - uses: rubygems/release-gem@v1
+      - uses: rubygems/release-gem@5c53f5308233b7c0f47411f0471b3faae6fa57b2 # v1
