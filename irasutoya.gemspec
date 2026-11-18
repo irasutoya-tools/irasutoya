@@ -11,8 +11,9 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Yuji Ueki']
   spec.email         = ['unhappychoice@gmail.com']
 
-  spec.summary       = 'CLI and library for irastoya'
-  spec.description   = 'CLI and library for irastoya'
+  spec.summary       = 'Ruby library for Irasutoya'
+  spec.description   = 'A Ruby library for searching Irasutoya illustrations, browsing categories, ' \
+                       'and fetching illustration details.'
   spec.homepage      = 'https://github.com/unhappychoice/irasutoya'
   spec.license       = 'MIT'
 
