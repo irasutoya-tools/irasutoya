@@ -19,7 +19,9 @@ module Irasutoya
 
       module Methods
         def fetch_page_and_parse(url)
-          with_fetch_timeout { read_document(url) }
+          with_fetch_timeout do
+            HTTP_DOCUMENT.open(URI.parse(url)) { |page| Nokogiri::HTML.parse(page.read, nil, page.charset) }
+          end
         end
 
         private
@@ -29,37 +31,15 @@ module Irasutoya
         rescue FetchDeadlineExceeded => e
           raise Timeout::Error, e.message
         end
-
-        def read_document(url)
-          uri = URI.parse(url)
-          return uri.open { |document| parse_document(document) } unless uri.is_a?(URI::HTTP)
-
-          HTTP_DOCUMENT.open(uri) { |document| parse_document(document) }
-        end
-
-        def parse_document(document)
-          Nokogiri::HTML.parse(document.read, nil, document.charset)
-        end
       end
 
       class HttpDocument
+        TRUSTED_HOST = 'www.irasutoya.com'
         REDIRECT_CODES = %w[301 302 303 307 308].freeze
-        MAX_REDIRECTS = 64
+        MAX_REDIRECTS = 10
 
         def open(uri, &)
-          # @type var visited: Hash[untyped, bool]
-          visited = {}
-          loop do
-            raise ArgumentError, 'userinfo not supported.  [RFC3986]' if uri.userinfo
-
-            response = @session.get(uri)
-            document = response_document(uri, response)
-            return yield document if response.is_a?(Net::HTTPSuccess)
-
-            uri = redirect(uri, response, document)
-            track_redirect(uri, visited, document)
-            return uri.open(&) unless uri.is_a?(URI::HTTP)
-          end
+          fetch_page(trusted_page_uri(uri), MAX_REDIRECTS, &)
         end
 
         def initialize(session)
@@ -72,14 +52,25 @@ module Irasutoya
 
         private
 
-        def track_redirect(uri, visited, document)
-          raise "HTTP redirection loop: #{uri}" if visited[uri]
+        def fetch_page(uri, redirects_left, &)
+          response = @session.get(uri)
+          document = response_document(uri, response)
+          return yield document if response.is_a?(Net::HTTPSuccess)
 
-          visited[uri] = true
-          return if visited.size <= MAX_REDIRECTS
+          target = redirect(uri, response, document)
+          document.close
+          raise IOError, 'Too many Irasutoya page redirects' if redirects_left.zero?
 
-          error = defined?(OpenURI::TooManyRedirects) ? OpenURI::TooManyRedirects : OpenURI::HTTPError
-          raise error.new('Too many redirects', document)
+          fetch_page(trusted_page_uri(target), redirects_left - 1, &)
+        end
+
+        def trusted_page_uri(uri)
+          unless uri.is_a?(URI::HTTP) && uri.host&.casecmp?(TRUSTED_HOST) &&
+                 uri.port == uri.default_port && uri.userinfo.nil?
+            raise ArgumentError, 'Untrusted Irasutoya page URL'
+          end
+
+          URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query)
         end
 
         def redirect(uri, response, document)
@@ -88,10 +79,7 @@ module Irasutoya
 
           location = response['location'] or raise URI::InvalidURIError
 
-          target = uri.merge(location)
-          raise "redirection forbidden: #{uri} -> #{target}" unless OpenURI.redirectable?(uri, target)
-
-          target
+          uri.merge(location)
         rescue URI::InvalidURIError
           raise OpenURI::HTTPError.new("#{status} (Invalid Location URI)", document)
         end

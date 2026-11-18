@@ -14,11 +14,10 @@ module Irasutoya
         private
 
         def with_fetch_timeout: [A] () { (Numeric) -> A } -> A
-        def read_document: (String) -> untyped
-        def parse_document: (untyped) -> untyped
       end
 
       class HttpDocument
+        TRUSTED_HOST: String
         REDIRECT_CODES: Array[String]
         MAX_REDIRECTS: Integer
         @session: HttpSessionPool
@@ -29,7 +28,8 @@ module Irasutoya
 
         private
 
-        def track_redirect: (untyped, Hash[untyped, bool], untyped) -> void
+        def fetch_page: [Result] (untyped, Integer) { (untyped) -> Result } -> Result
+        def trusted_page_uri: (untyped) -> untyped
         def redirect: (untyped, untyped, untyped) -> untyped
         def response_document: (untyped, untyped) -> untyped
       end

@@ -6,6 +6,7 @@ require 'timeout'
 RSpec.describe 'Illustration HTTP connections' do
   let(:listener) { TCPServer.new('127.0.0.1', 0) }
   let(:origin) { "http://127.0.0.1:#{listener.addr[1]}" }
+  let(:trusted_origin) { 'https://www.irasutoya.com' }
   let(:requests) { Queue.new }
   let(:disconnections) { Queue.new }
 
@@ -25,6 +26,18 @@ RSpec.describe 'Illustration HTTP connections' do
   ensure
     server&.kill&.join
     listener.close
+  end
+
+  before do
+    allow(Net::HTTP).to receive(:new).and_call_original
+    allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, nil, nil, nil, nil)
+                                    .and_wrap_original do |new_http, *|
+      http = new_http.call('127.0.0.1', listener.addr[1], nil)
+      allow(http).to receive(:use_ssl=).with(true)
+      http
+    end
+    allow(ENV).to receive(:[]).and_call_original
+    %w[https_proxy HTTPS_PROXY].each { |name| allow(ENV).to receive(:[]).with(name).and_return(nil) }
   end
 
   it 'parses twenty distinct detail pages over a single TCP connection' do
@@ -51,10 +64,10 @@ RSpec.describe 'Illustration HTTP connections' do
       allow(ENV).to receive(:[]).with(name).and_return(nil)
     end
     allow(ENV).to receive(:[]).with('https_proxy').and_return(origin)
-    expect(self).to receive(:response_for).with('illustration.invalid:443')
+    expect(self).to receive(:response_for).with('www.irasutoya.com:443')
                                          .and_return(http_response('502 Bad Gateway', ''))
 
-    expect { fetch_detail('/detail', from: 'https://illustration.invalid') }
+    expect { fetch_detail('/detail') }
       .to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
   end
 
@@ -62,8 +75,6 @@ RSpec.describe 'Illustration HTTP connections' do
     fetcher = Irasutoya::Modules::HasDocumentFetcher
     session_class = fetcher.const_get(:HttpSession)
     stub_const("#{session_class}::IDLE_TIMEOUT", 0.1)
-    pool = fetcher.const_get(:HttpSessionPool).new
-    stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(pool))
 
     fetch_detail('/first')
 
@@ -110,11 +121,12 @@ RSpec.describe 'Illustration HTTP connections' do
       original.call(path)
     end
 
-    slow_fetch = Thread.new { fetch_detail('/slow') }
+    pool = Irasutoya::Modules::HasDocumentFetcher.const_get(:HttpSessionPool).new
+    slow_fetch = Thread.new { pool.get(URI.parse("#{origin}/slow")) }
     requests.pop
-    expect(fetch_detail('/fast', from: other_origin).title).to eq('/fast')
+    expect(pool.get(URI.parse("#{other_origin}/fast")).body).to include('/fast')
     release_response << true
-    expect(slow_fetch.value.title).to eq('/slow')
+    expect(slow_fetch.value.body).to include('/slow')
   ensure
     slow_fetch&.kill&.join
     other_server&.kill&.join
@@ -122,13 +134,13 @@ RSpec.describe 'Illustration HTTP connections' do
   end
 
   it 'rejects userinfo before requesting a detail page' do
-    expect { fetch_detail('/private', from: origin.sub('://', '://user:pass@')) }
-      .to raise_error(ArgumentError, /userinfo not supported/)
+    expect { fetch_detail('/private', from: trusted_origin.sub('://', '://user:pass@')) }
+      .to raise_error(ArgumentError, /Untrusted Irasutoya page URL/)
     expect(requests).to be_empty
   end
 
   it 'rejects userinfo before requesting a redirect target' do
-    expect { fetch_detail('/redirect-with-userinfo') }.to raise_error(ArgumentError, /userinfo not supported/)
+    expect { fetch_detail('/redirect-with-userinfo') }.to raise_error(ArgumentError, /Untrusted Irasutoya page URL/)
     expect(requests.size).to eq(1)
   end
 
@@ -142,7 +154,7 @@ RSpec.describe 'Illustration HTTP connections' do
     end
   end
 
-  def fetch_detail(path, from: origin)
+  def fetch_detail(path, from: trusted_origin)
     Irasutoya::IrasutoLink.new(title: 'Illustration', show_url: from + path).fetch_irasuto
   end
 
@@ -159,7 +171,7 @@ RSpec.describe 'Illustration HTTP connections' do
     return "HTTP/1.1 302 Found\r\nLocation: /destination\r\nContent-Length: 0\r\n\r\n" if path == '/redirect'
 
     if path == '/redirect-with-userinfo'
-      target = origin.sub('://', '://user:pass@') + '/destination'
+      target = trusted_origin.sub('://', '://user:pass@') + '/destination'
       return "HTTP/1.1 302 Found\r\nLocation: #{target}\r\nContent-Length: 0\r\n\r\n"
     end
 

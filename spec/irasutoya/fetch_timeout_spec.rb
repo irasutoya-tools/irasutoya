@@ -5,9 +5,16 @@ require 'socket'
 RSpec.describe 'Illustration fetch deadlines' do
   let(:server) { TCPServer.new('127.0.0.1', 0) }
   let(:base_url) { "http://127.0.0.1:#{server.addr[1]}" }
+  let(:trusted_url) { 'https://www.irasutoya.com' }
 
   before do
     stub_const('Irasutoya::Modules::HasDocumentFetcher::FETCH_TIMEOUT', 0.5)
+    allow(Net::HTTP).to receive(:new).and_call_original
+    allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, any_args).and_wrap_original do |new_http, *|
+      http = new_http.call('127.0.0.1', server.addr[1], nil)
+      allow(http).to receive(:use_ssl=).with(true)
+      http
+    end
   end
 
   after do
@@ -49,7 +56,7 @@ RSpec.describe 'Illustration fetch deadlines' do
   it 'shares the deadline across both random feed requests and the detail request' do
     feed = JSON.generate(feed: {
                            'openSearch$totalResults' => { '$t' => '2' },
-                           'entry' => [{ link: [{ rel: 'alternate', href: "#{base_url}/detail" }] }]
+                           'entry' => [{ link: [{ rel: 'alternate', href: "#{trusted_url}/detail" }] }]
                          })
     serve(
       response('200 OK', body: "callback(#{feed});", delay: 0.15),
@@ -68,7 +75,7 @@ RSpec.describe 'Illustration fetch deadlines' do
   end
 
   def fetch_illustration(path)
-    Irasutoya::IrasutoLink.new(title: '', show_url: "#{base_url}#{path}").fetch_irasuto
+    Irasutoya::IrasutoLink.new(title: '', show_url: "#{trusted_url}#{path}").fetch_irasuto
   end
 
   def expect_timeout(&block)
