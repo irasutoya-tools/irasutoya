@@ -20,11 +20,7 @@ module Irasutoya
 
     class << self
       def random
-        url = random_url
-        document = fetch_page_and_parse(url)
-        parsed = parse_show_page(document: document)
-
-        Irasuto.new(url: url, title: parsed[:title], description: parsed[:description], image_urls: parsed[:image_urls])
+        PageLoader.load_detail(random_url)
       end
 
       def search(query:, page: 0)
@@ -34,10 +30,7 @@ module Irasutoya
                 "https://www.irasutoya.com/search?q=#{CGI.escape query}&max-results=20&start=#{page * 20}&by-date=false"
               end
 
-        document = fetch_page_and_parse(url)
-        parse_list_page(document: document).map do |parsed|
-          IrasutoLink.new(title: parsed[:title], show_url: parsed[:show_url])
-        end
+        PageLoader.load_list(url)
       end
 
       private

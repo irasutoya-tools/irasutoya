@@ -13,15 +13,7 @@ module Irasutoya
     end
 
     def fetch_irasuto
-      document = fetch_page_and_parse(show_url)
-      parsed = parse_show_page(document: document)
-
-      Irasuto.new(
-        url: show_url,
-        title: parsed[:title],
-        description: parsed[:description],
-        image_urls: parsed[:image_urls]
-      )
+      PageLoader.load_detail(show_url)
     end
   end
 end
