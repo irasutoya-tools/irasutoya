@@ -1,6 +1,30 @@
 # frozen_string_literal: true
 
 RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
+  describe 'image accessors' do
+    it 'keeps single-image results when the constructor array grows' do
+      urls = ['first']
+      illustration = described_class.new(url: 'page', title: 'Title', description: 'Description', image_urls: urls)
+      urls << 'second'
+
+      expect(illustration.image_urls).to eq(['first'])
+      expect(illustration.image_url).to eq('first')
+      expect(illustration.postthumb_image_url).to be_nil
+      expect(illustration.has_multiple_images).to be(false)
+    end
+
+    it 'keeps multiple-image results when the returned array is cleared' do
+      urls = %w[first second]
+      illustration = described_class.new(url: 'page', title: 'Title', description: 'Description', image_urls: urls)
+      illustration.image_urls.clear
+
+      expect(illustration.image_urls).to eq(%w[first second])
+      expect(illustration.image_url).to eq('first')
+      expect(illustration.postthumb_image_url).to eq('first')
+      expect(illustration.has_multiple_images).to be(true)
+    end
+  end
+
   describe '#random' do # rubocop:disable Metrics/BlockLength
     let(:feed_body) { File.read('spec/files/posts_summary.jsonp') }
     let(:feed_count) { 22_312 }
