@@ -23,8 +23,8 @@ RSpec.describe 'Illustration fetch deadlines' do
     server.close
   end
 
-  it 'times out while chunks are arriving and closes the connection' do
-    serve(lambda do |socket|
+  it 'closes an interrupted download and reconnects for the next fetch' do
+    stream = lambda do |socket|
       socket.write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n")
       loop do
         socket.write("1\r\na\r\n")
@@ -32,11 +32,14 @@ RSpec.describe 'Illustration fetch deadlines' do
       end
     rescue Errno::ECONNRESET, Errno::EPIPE
       nil
-    end)
+    end
+    serve(stream, response('200 OK', body: File.read('spec/files/show.html'), delay: 0))
 
     expect_timeout { fetch_illustration('/detail') }
+    expect(fetch_illustration('/next').title).to eq('太った少年のイラスト（肥満）')
     expect(@worker.join(1)).to be(@worker)
-    expect(@worker.value).to be_nil
+    expect(@requests.pop(true)).to start_with('GET /detail ')
+    expect(@requests.pop(true)).to start_with('GET /next ')
   end
 
   it 'shares the deadline across redirects' do

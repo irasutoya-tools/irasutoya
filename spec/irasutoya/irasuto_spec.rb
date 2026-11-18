@@ -91,7 +91,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       Irasutoya::Irasuto.random
 
       expect(page_http.use_ssl?).to be(true)
-      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(show_url).request_uri)).once
+      expect(page_http).to have_received(:get).with(URI.parse(show_url).request_uri).once
     end
 
     it 'rejects an off-origin feed link before opening a page connection' do
@@ -176,7 +176,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     it 'loads links from the paginated search URL with their detail URLs' do
       link = Irasutoya::Irasuto.search(query: query, page: 2).first
 
-      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(paginated_url).request_uri)).once
+      expect(page_http).to have_received(:get).with(URI.parse(paginated_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end

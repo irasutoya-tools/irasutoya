@@ -10,7 +10,7 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
   def redirect_to(location)
     response = Net::HTTPFound.new('1.1', '302', 'Found')
     response['Location'] = location
-    allow(response).to receive(:read_body)
+    allow(response).to receive(:body).and_return('')
     response
   end
 
@@ -31,27 +31,27 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
 
   it 'follows relative redirects and upgrades trusted HTTP redirect targets to HTTPS' do
     http = stub_page('show.html')
-    allow(http).to receive(:request).with(have_attributes(path: '/page')).and_yield(redirect_to('/next'))
-    allow(http).to receive(:request).with(have_attributes(path: '/next'))
-                                    .and_yield(redirect_to('http://www.irasutoya.com:80/final'))
+    allow(http).to receive(:get).with('/page').and_return(redirect_to('/next'))
+    allow(http).to receive(:get).with('/next')
+                             .and_return(redirect_to('http://www.irasutoya.com:80/final'))
 
     expect(fetch_page(page_url)).to be_a(Nokogiri::HTML::Document)
-    expect(http).to have_received(:request).with(have_attributes(path: '/final'))
+    expect(http).to have_received(:get).with('/final')
     expect(http.use_ssl?).to be(true)
   end
 
   it 'rejects an off-origin redirect after a trusted redirect' do
     http = stub_page_http
-    expect(http).to receive(:request).with(have_attributes(path: '/page')).ordered.and_yield(redirect_to('/next'))
-    expect(http).to receive(:request).with(have_attributes(path: '/next')).ordered
-                                    .and_yield(redirect_to('//example.com/page'))
+    expect(http).to receive(:get).with('/page').ordered.and_return(redirect_to('/next'))
+    expect(http).to receive(:get).with('/next').ordered
+                           .and_return(redirect_to('//example.com/page'))
 
     expect { fetch_page(page_url) }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
   end
 
   it 'bounds redirect loops' do
     http = stub_page_http
-    expect(http).to receive(:request).exactly(11).times.and_yield(redirect_to('/page'))
+    expect(http).to receive(:get).exactly(11).times.and_return(redirect_to('/page'))
 
     expect { fetch_page(page_url) }.to raise_error(IOError, 'Too many Irasutoya page redirects')
   end

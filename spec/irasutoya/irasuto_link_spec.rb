@@ -15,7 +15,7 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
     it 'should return irasuto with url' do
       irasuto = irasuto_link.fetch_irasuto
 
-      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(irasuto_link.show_url).request_uri)).once
+      expect(page_http).to have_received(:get).with(URI.parse(irasuto_link.show_url).request_uri).once
       expect(irasuto.url).to eq(irasuto_link.show_url)
     end
 
