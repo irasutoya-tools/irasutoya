@@ -33,7 +33,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         allow(response).to receive(:body).and_return(feed_body)
       end
     end
-    let(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
+    let!(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
     let(:show_fixture) { 'spec/files/show.html' }
 
     before do
