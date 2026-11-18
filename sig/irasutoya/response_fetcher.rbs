@@ -6,10 +6,10 @@ module Irasutoya
     REDIRECT_CODES: Array[String]
     MAX_REDIRECTS: Integer
 
-    def self.get: (String, max_bytes: Integer) -> [String, String?]
-    private def self.request: (URI::HTTP, Integer) -> ([String, String?] | String)
+    def self.get: (String, max_bytes: Integer, ?follow_redirects: bool) -> [String, String?]
+    private def self.request: (URI::HTTP, Integer, bool) -> ([String, String?] | String)
     private def self.redirect_uri: (URI::HTTP, String) -> URI::HTTP
-    private def self.read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
+    def self.read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
     private def self.abort_download: (Net::HTTP, Integer) -> bot
   end
 end

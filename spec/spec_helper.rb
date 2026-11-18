@@ -8,21 +8,37 @@ end
 
 require 'bundler/setup'
 require 'irasutoya'
+require_relative 'support/ordered_list_results'
 
-module ResponseFixtures
-  def stub_html_fixture(filename, url: anything)
-    allow(Irasutoya::ResponseFetcher).to receive(:get)
-      .with(url, max_bytes: html_byte_limit)
-      .and_return([File.binread("spec/files/#{filename}"), 'text/html; charset="UTF-8"'])
+module PageFixtures
+  def stub_page(filename)
+    response = Net::HTTPOK.new('1.1', '200', 'OK')
+    response['Content-Type'] = 'text/html; charset=UTF-8'
+    allow(response).to receive(:body).and_return(File.read("spec/files/#{filename}"))
+    allow(response).to receive(:read_body).and_yield(response.body)
+    stub_page_http.tap { |http| allow(http).to receive(:request_get).and_yield(response).and_return(response) }
   end
 
-  def html_byte_limit
-    Irasutoya::Modules::HasDocumentFetcher::MAX_HTML_BYTES
+  def stub_page_http
+    http = Net::HTTP.new('www.irasutoya.com', 443, nil)
+    allow(http).to receive(:start) do
+      allow(http).to receive(:started?).and_return(true)
+      http
+    end
+    allow(http).to receive(:finish)
+    allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, any_args).and_return(http)
+    http
   end
 end
 
 RSpec.configure do |config|
-  config.include ResponseFixtures
+  config.include PageFixtures
+
+  config.before do
+    fetcher = Irasutoya::Modules::HasDocumentFetcher
+    pool = fetcher.const_get(:HttpSessionPool).new
+    stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(pool))
+  end
 
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = '.rspec_status'
