@@ -94,13 +94,14 @@ module Irasutoya
 
       class HttpSessionPool
         def get(uri)
+          proxy = uri.find_proxy
           # @type var key: origin
-          key = [Process.pid, uri.scheme, uri.hostname, uri.port]
+          key = [Process.pid, uri.scheme, uri.hostname, uri.port, proxy&.to_s]
           session = @lock.synchronize do
             @users[key] += 1
             @sessions[key] ||= HttpSession.new { remove_idle_session(key) }
           end
-          session.get(uri) { @lock.synchronize { @users[key] -= 1 } }
+          session.get(uri, proxy) { @lock.synchronize { @users[key] -= 1 } }
         end
 
         def close_inherited_connections
@@ -129,9 +130,9 @@ module Irasutoya
       class HttpSession
         IDLE_TIMEOUT = 5.0
 
-        def get(uri)
+        def get(uri, proxy)
           @lock.synchronize do
-            session_for(uri).get(uri.request_uri)
+            session_for(uri, proxy).get(uri.request_uri)
           ensure
             @idle_since = monotonic_time
             @reaper = Thread.new { close_when_idle } unless @reaper&.alive?
@@ -153,10 +154,12 @@ module Irasutoya
 
         private
 
-        def session_for(uri)
+        def session_for(uri, proxy)
           return @http if @http&.started?
+          raise "Non-HTTP proxy URI: #{proxy}" if proxy && proxy.scheme != 'http'
 
-          @http = Net::HTTP.new(uri.hostname, uri.port)
+          proxy_user, proxy_password = proxy&.userinfo&.split(':')
+          @http = Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password)
           @http.use_ssl = uri.scheme == 'https'
           @http.keep_alive_timeout = IDLE_TIMEOUT
           @http.start

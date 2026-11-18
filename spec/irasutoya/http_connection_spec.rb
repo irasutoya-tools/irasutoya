@@ -45,6 +45,19 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(requests.pop).not_to equal(original_socket)
   end
 
+  it 'uses https_proxy for an HTTPS detail request when http_proxy is unset' do
+    allow(ENV).to receive(:[]).and_call_original
+    %w[http_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY].each do |name|
+      allow(ENV).to receive(:[]).with(name).and_return(nil)
+    end
+    allow(ENV).to receive(:[]).with('https_proxy').and_return(origin)
+    expect(self).to receive(:response_for).with('illustration.invalid:443')
+                                         .and_return(http_response('502 Bad Gateway', ''))
+
+    expect { fetch_detail('/detail', from: 'https://illustration.invalid') }
+      .to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+  end
+
   it 'closes idle connections without waiting for another request' do
     fetcher = Irasutoya::Modules::HasDocumentFetcher
     session_class = fetcher.const_get(:HttpSession)

@@ -28,7 +28,7 @@ module Irasutoya
       end
 
       class HttpSessionPool
-        type origin = [Integer, String, String, Integer]
+        type origin = [Integer, String, String, Integer, String?]
 
         @lock: Mutex
         @sessions: Hash[origin, HttpSession]
@@ -51,13 +51,13 @@ module Irasutoya
         @idle_since: Float
         @reaper: Thread?
 
-        def get: (untyped) { () -> void } -> untyped
+        def get: (untyped, untyped) { () -> void } -> untyped
         def initialize: () { () -> void } -> void
         def close_inherited_connection: () -> void
 
         private
 
-        def session_for: (untyped) -> untyped
+        def session_for: (untyped, untyped) -> untyped
         def close_when_idle: () -> void
         def remaining_idle_time: () -> Float
         def monotonic_time: () -> Float
