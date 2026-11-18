@@ -139,34 +139,36 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
   describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
-    let(:expected) do
-      %w[
-        「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
-        親戚づきあいが苦手な人のイラスト（男性） 親戚の集まりのイラスト お汁粉のイラスト 日の出に照らされるぴょこのイラスト
-        電子マネー対応の賽銭箱のイラスト（QRコード） 懐中しるこのイラスト 二人羽織のイラスト（女性）
-        獅子舞に頭を噛まれる人のイラスト（女性） 獅子舞に頭を噛まれる人のイラスト（男性） お正月のライン素材（亥年）
-        「2019」のイラスト文字 和服を着た高齢の女性のイラスト 和服を着た高齢の男性のイラスト 和服を着た中年女性のイラスト
-        和服を着た中年男性のイラスト 書き初めをする猪のイラスト（亥年） 福袋を持った猪のイラスト（亥年）
-      ]
-    end
+    let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
+    let(:paginated_url) { "#{search_url}&max-results=20&start=40&by-date=false" }
+    let(:html) { File.read('spec/files/list.html') }
+    let(:results) { described_class.search(query: query) }
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      response = double('HTTP response', charset: 'UTF-8', read: html)
+      [search_url, paginated_url].each do |url|
+        allow(OpenURI).to receive(:open_uri).with(URI.parse(url)).and_yield(response)
+      end
+      allow(URI).to receive(:parse).and_call_original
     end
 
-    it 'should return irasuto links' do
-      expect(Irasutoya::Irasuto.search(query: query).size).to eq 20
-    end
+    include_examples 'ordered list results'
 
-    it 'should return irasutos' do
-      expect(Irasutoya::Irasuto.search(query: query).map(&:title)).to eq expected
+    it 'queries anchors once in each of the twenty result boxes' do
+      document = Nokogiri::HTML.parse(html, nil, 'UTF-8')
+      boxes = document.css('.box')
+      expect(boxes.size).to eq(20)
+      allow(Nokogiri::HTML).to receive(:parse).with(html, nil, 'UTF-8').and_return(document)
+      allow(document).to receive(:css).with('.box').and_return(boxes)
+      boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
+
+      results
     end
 
     it 'loads links from the paginated search URL with their detail URLs' do
       link = Irasutoya::Irasuto.search(query: query, page: 2).first
-      url = 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2&max-results=20&start=40&by-date=false'
 
-      expect(URI).to have_received(:parse).with(url).once
+      expect(URI).to have_received(:parse).with(paginated_url).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end
