@@ -19,7 +19,29 @@ Add this line to your application's Gemfile:
 ```ruby
 gem 'irasutoya'
 ```
+
+## Quick start
+
+After adding the gem to your Gemfile, run `bundle install`. Save this example as `find_illustration.rb`:
+
+```ruby
+require 'irasutoya'
+
+link = Irasutoya::Irasuto.search(query: 'おじさん').first
+if link
+  illustration = link.fetch_irasuto
+  puts illustration.title
+  puts illustration.image_url
+else
+  puts 'No illustrations found.'
+end
+```
+
+Run `bundle exec ruby find_illustration.rb` from your application directory. The script searches Irasutoya and prints the title and image URL of the first match.
+
 ## Usage
+
+Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
 
 ```ruby
 # Irasuto

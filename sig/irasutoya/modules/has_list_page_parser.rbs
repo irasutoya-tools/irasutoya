@@ -8,8 +8,6 @@ module Irasutoya
       end
 
       module PrivateMethods
-        def self.title_from: (box: untyped) -> String
-        def self.show_url_from: (box: untyped) -> String
         def self.thumbnail_url_from: (box: untyped) -> String?
       end
     end

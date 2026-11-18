@@ -33,7 +33,7 @@ module Irasutoya
 
     class << self
       def random
-        PageLoader.load_detail(random_url)
+        with_fetch_timeout { PageLoader.load_detail(random_url) }
       end
 
       def search(query:, page: 0)

@@ -12,9 +12,10 @@ module Irasutoya
       module Methods
         def parse_list_page(document:)
           document.css('.box').map do |box|
+            anchors = box.css('a')
             {
-              title: PrivateMethods.title_from(box: box),
-              show_url: PrivateMethods.show_url_from(box: box),
+              title: anchors[1].text,
+              show_url: anchors.first.attribute('href').value,
               thumbnail_url: PrivateMethods.thumbnail_url_from(box: box)
             }
           end
@@ -23,14 +24,6 @@ module Irasutoya
 
       module PrivateMethods
         class << self
-          def title_from(box:)
-            box.css('a')[1].text
-          end
-
-          def show_url_from(box:)
-            box.css('a').first.attribute('href').value
-          end
-
           def thumbnail_url_from(box:)
             script = box.at_css('.boxim a script')
             thumbnail_call = %r{\bdocument\.write\(\s*bp_thumbnail_resize\(\s*(["'])(https?://[^"'\s\\]+)\1\s*,}
