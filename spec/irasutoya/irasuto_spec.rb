@@ -141,6 +141,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
   describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
+    let(:listing_fixture) { 'spec/files/list.html' }
     let(:expected) do
       %w[
         「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
@@ -153,7 +154,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      response = double('HTTP response', charset: 'UTF-8', read: File.read(listing_fixture))
+      allow(OpenURI).to receive(:open_uri).and_yield(response)
     end
 
     it 'should return irasuto links' do
@@ -164,13 +166,28 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       expect(Irasutoya::Irasuto.search(query: query).map(&:title)).to eq expected
     end
 
-    it 'loads links from the paginated search URL with their detail URLs' do
+    it 'loads detail and thumbnail URLs from paginated search results' do
       link = Irasutoya::Irasuto.search(query: query, page: 2).first
       url = 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2&max-results=20&start=40&by-date=false'
 
-      expect(URI).to have_received(:parse).with(url).once
+      expect(OpenURI).to have_received(:open_uri).with(URI.parse(url)).once
+      expect(OpenURI).to have_received(:open_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
+      expect(link.thumbnail_url).to eq(
+        'https://1.bp.blogspot.com/-f_bCUFp3lLk/XTKbbODDyQI/AAAAAAABTsY/F65tRwRy-qcIkc8M8HRij85HieUDMMCngCLcBGAs/s72-c/text_company_shigoto_hajime_osame.jpg'
+      )
+    end
+
+    context 'when the listing has missing or unusable thumbnails' do
+      let(:listing_fixture) { 'spec/files/list_without_thumbnails.html' }
+
+      it 'keeps every card in the results' do
+        links = Irasutoya::Irasuto.search(query: query)
+
+        expect(links.map(&:title)).to eq(['Missing thumbnail', 'Empty thumbnail', 'Invalid thumbnail'])
+        expect(links.map(&:thumbnail_url)).to eq([nil, nil, nil])
+      end
     end
   end
 end

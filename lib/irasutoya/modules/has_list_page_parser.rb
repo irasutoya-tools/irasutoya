@@ -14,7 +14,8 @@ module Irasutoya
           document.css('.box').map do |box|
             {
               title: PrivateMethods.title_from(box: box),
-              show_url: PrivateMethods.show_url_from(box: box)
+              show_url: PrivateMethods.show_url_from(box: box),
+              thumbnail_url: PrivateMethods.thumbnail_url_from(box: box)
             }
           end
         end
@@ -28,6 +29,15 @@ module Irasutoya
 
           def show_url_from(box:)
             box.css('a').first.attribute('href').value
+          end
+
+          def thumbnail_url_from(box:)
+            script = box.at_css('.boxim a script')
+            thumbnail_call = %r{\bdocument\.write\(\s*bp_thumbnail_resize\(\s*(["'])(https?://[^"'\s\\]+)\1\s*,}
+            url = script&.text&.[](thumbnail_call, 2)
+            url if url && URI.parse(url).host
+          rescue URI::InvalidURIError
+            nil
           end
         end
       end

@@ -61,12 +61,15 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
       expect(category.fetch_irasuto_links.size).to eq 20
     end
 
-    it 'loads links from the category URL with their detail URLs' do
+    it 'loads detail and thumbnail URLs from the category listing' do
       link = category.fetch_irasuto_links.first
 
-      expect(URI).to have_received(:parse).with(category.list_url).once
+      expect(OpenURI).to have_received(:open_uri).with(URI.parse(list_url)).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
+      expect(link.thumbnail_url).to eq(
+        'https://1.bp.blogspot.com/-f_bCUFp3lLk/XTKbbODDyQI/AAAAAAABTsY/F65tRwRy-qcIkc8M8HRij85HieUDMMCngCLcBGAs/s72-c/text_company_shigoto_hajime_osame.jpg'
+      )
     end
 
     it 'should return irasutos' do

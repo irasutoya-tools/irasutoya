@@ -8,7 +8,8 @@ module Irasutoya
 
     def self.load_list(url)
       parse_list_page(document: fetch_page_and_parse(url)).map do |parsed|
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: parsed.fetch(:show_url))
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: parsed.fetch(:show_url),
+                        thumbnail_url: parsed.fetch(:thumbnail_url))
       end
     end
 
