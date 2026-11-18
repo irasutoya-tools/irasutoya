@@ -34,6 +34,8 @@ module Irasutoya
           # @type var visited: Hash[untyped, bool]
           visited = {}
           loop do
+            raise ArgumentError, 'userinfo not supported.  [RFC3986]' if uri.userinfo
+
             response = @session.get(uri)
             document = response_document(uri, response)
             return yield document if response.is_a?(Net::HTTPSuccess)
@@ -86,6 +88,35 @@ module Irasutoya
         end
       end
 
+      class HttpSessionPool
+        def get(uri)
+          # @type var key: origin
+          key = [Process.pid, uri.scheme, uri.hostname, uri.port]
+          session = @lock.synchronize do
+            @users[key] += 1
+            @sessions[key] ||= HttpSession.new { remove_idle_session(key) }
+          end
+          session.get(uri) { @lock.synchronize { @users[key] -= 1 } }
+        end
+
+        def initialize
+          @lock = Mutex.new
+          @sessions = {}
+          @users = Hash.new(0)
+        end
+
+        private
+
+        def remove_idle_session(key)
+          @lock.synchronize do
+            return unless @users[key].zero?
+
+            @sessions.delete(key)
+            @users.delete(key)
+          end
+        end
+      end
+
       class HttpSession
         IDLE_TIMEOUT = 5.0
 
@@ -94,22 +125,21 @@ module Irasutoya
             session_for(uri).get(uri.request_uri)
           ensure
             @idle_since = monotonic_time
-            @reaper = Thread.new { close_when_idle } if @http&.started? && !@reaper&.alive?
+            @reaper = Thread.new { close_when_idle } unless @reaper&.alive?
+            yield
           end
         end
 
-        def initialize
+        def initialize(&on_idle)
           @lock = Mutex.new
+          @on_idle = on_idle
         end
 
         private
 
         def session_for(uri)
-          key = [Process.pid, uri.scheme, uri.hostname, uri.port]
-          return @http if @key == key && @http.started?
+          return @http if @http&.started?
 
-          @http.finish if @http&.started?
-          @key = key
           @http = Net::HTTP.new(uri.hostname, uri.port)
           @http.use_ssl = uri.scheme == 'https'
           @http.keep_alive_timeout = IDLE_TIMEOUT
@@ -129,7 +159,8 @@ module Irasutoya
           remaining = IDLE_TIMEOUT - (monotonic_time - @idle_since)
           return remaining if remaining.positive?
 
-          @http.finish if @http.started?
+          @http.finish if @http&.started?
+          @on_idle.call
           @reaper = nil
           remaining
         end
@@ -139,8 +170,8 @@ module Irasutoya
         end
       end
 
-      HTTP_DOCUMENT = HttpDocument.new(HttpSession.new)
-      private_constant :HttpDocument, :HttpSession, :HTTP_DOCUMENT
+      HTTP_DOCUMENT = HttpDocument.new(HttpSessionPool.new)
+      private_constant :HttpDocument, :HttpSessionPool, :HttpSession, :HTTP_DOCUMENT
     end
   end
 end

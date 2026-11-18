@@ -14,10 +14,10 @@ module Irasutoya
       class HttpDocument
         REDIRECT_CODES: Array[String]
         MAX_REDIRECTS: Integer
-        @session: HttpSession
+        @session: HttpSessionPool
 
         def open: [Result] (untyped) { (untyped) -> Result } -> Result
-        def initialize: (HttpSession) -> void
+        def initialize: (HttpSessionPool) -> void
 
         private
 
@@ -26,16 +26,31 @@ module Irasutoya
         def response_document: (untyped, untyped) -> untyped
       end
 
+      class HttpSessionPool
+        type origin = [Integer, String, String, Integer]
+
+        @lock: Mutex
+        @sessions: Hash[origin, HttpSession]
+        @users: Hash[origin, Integer]
+
+        def get: (untyped) -> untyped
+        def initialize: () -> void
+
+        private
+
+        def remove_idle_session: (origin) -> void
+      end
+
       class HttpSession
         IDLE_TIMEOUT: Float
         @lock: Mutex
-        @key: [Integer, String, String, Integer]?
+        @on_idle: ^() -> void
         @http: untyped
         @idle_since: Float
         @reaper: Thread?
 
-        def get: (untyped) -> untyped
-        def initialize: () -> void
+        def get: (untyped) { () -> void } -> untyped
+        def initialize: () { () -> void } -> void
 
         private
 

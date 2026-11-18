@@ -49,7 +49,8 @@ RSpec.describe 'Illustration HTTP connections' do
     fetcher = Irasutoya::Modules::HasDocumentFetcher
     session_class = fetcher.const_get(:HttpSession)
     stub_const("#{session_class}::IDLE_TIMEOUT", 0.1)
-    stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(session_class.new))
+    pool = fetcher.const_get(:HttpSessionPool).new
+    stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(pool))
 
     fetch_detail('/first')
 
@@ -59,6 +60,43 @@ RSpec.describe 'Illustration HTTP connections' do
   it 'follows a relative redirect on the same connection' do
     expect(fetch_detail('/redirect').title).to eq('/destination')
     expect(requests.pop).to equal(requests.pop)
+  end
+
+  it 'fetches another origin while the first origin is waiting for a response' do
+    other_listener = TCPServer.new('127.0.0.1', 0)
+    other_origin = "http://127.0.0.1:#{other_listener.addr[1]}"
+    other_server = Thread.new do
+      socket = other_listener.accept
+      serve(socket)
+    ensure
+      socket&.close
+    end
+    release_response = Queue.new
+    allow(self).to receive(:response_for).and_wrap_original do |original, path|
+      release_response.pop if path == '/slow'
+      original.call(path)
+    end
+
+    slow_fetch = Thread.new { fetch_detail('/slow') }
+    requests.pop
+    expect(fetch_detail('/fast', from: other_origin).title).to eq('/fast')
+    release_response << true
+    expect(slow_fetch.value.title).to eq('/slow')
+  ensure
+    slow_fetch&.kill&.join
+    other_server&.kill&.join
+    other_listener&.close
+  end
+
+  it 'rejects userinfo before requesting a detail page' do
+    expect { fetch_detail('/private', from: origin.sub('://', '://user:pass@')) }
+      .to raise_error(ArgumentError, /userinfo not supported/)
+    expect(requests).to be_empty
+  end
+
+  it 'rejects userinfo before requesting a redirect target' do
+    expect { fetch_detail('/redirect-with-userinfo') }.to raise_error(ArgumentError, /userinfo not supported/)
+    expect(requests.size).to eq(1)
   end
 
   it 'uses the response charset to decode the document' do
@@ -71,8 +109,8 @@ RSpec.describe 'Illustration HTTP connections' do
     end
   end
 
-  def fetch_detail(path)
-    Irasutoya::IrasutoLink.new(title: 'Illustration', show_url: origin + path).fetch_irasuto
+  def fetch_detail(path, from: origin)
+    Irasutoya::IrasutoLink.new(title: 'Illustration', show_url: from + path).fetch_irasuto
   end
 
   def serve(socket)
@@ -86,6 +124,11 @@ RSpec.describe 'Illustration HTTP connections' do
 
   def response_for(path)
     return "HTTP/1.1 302 Found\r\nLocation: /destination\r\nContent-Length: 0\r\n\r\n" if path == '/redirect'
+
+    if path == '/redirect-with-userinfo'
+      target = origin.sub('://', '://user:pass@') + '/destination'
+      return "HTTP/1.1 302 Found\r\nLocation: #{target}\r\nContent-Length: 0\r\n\r\n"
+    end
 
     return http_response('404 Not Found', 'Missing illustration') if path == '/missing'
 
