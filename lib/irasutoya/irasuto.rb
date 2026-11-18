@@ -6,6 +6,8 @@ module Irasutoya
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
 
+    MAX_FEED_BYTES = 1024 * 1024
+
     attr_reader :url, :title, :description
 
     def initialize(url:, title:, description:, image_urls:)
@@ -50,9 +52,8 @@ module Irasutoya
 
       def fetch_feed(index)
         url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
-        response = Net::HTTP.get_response(URI.parse(url))
-        response.value
-        JSON.parse(response.body[/{.+}/]).fetch('feed')
+        body, = ResponseFetcher.get(url, max_bytes: MAX_FEED_BYTES, follow_redirects: false)
+        JSON.parse(body[/{.+}/]).fetch('feed')
       end
 
       def random_url

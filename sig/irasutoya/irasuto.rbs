@@ -1,5 +1,7 @@
 module Irasutoya
   class Irasuto
+    MAX_FEED_BYTES: Integer
+
     include Modules::HasDocumentFetcher::Methods
     include Modules::HasListPageParser::Methods
     include Modules::HasShowPageParser::Methods

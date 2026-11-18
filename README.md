@@ -42,6 +42,8 @@ Run `bundle exec ruby find_illustration.rb` from your application directory. The
 ## Usage
 
 Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
+HTML responses are limited to 4 MiB and feed responses to 1 MiB. Fetch operations raise
+`Irasutoya::ResponseTooLargeError` when a response exceeds its limit after decompression.
 
 ```ruby
 # Irasuto

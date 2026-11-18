@@ -7,6 +7,7 @@ module Irasutoya
   module Modules
     module HasDocumentFetcher
       FETCH_TIMEOUT = 10
+      MAX_HTML_BYTES = 4 * 1024 * 1024
 
       # Net::HTTP retries Timeout::Error, so translate the deadline at the fetch boundary.
       class FetchDeadlineExceeded < StandardError; end
@@ -153,7 +154,10 @@ module Irasutoya
 
         def get(uri, proxy)
           @lock.synchronize do
-            session_for(uri, proxy).get(uri.request_uri)
+            http = session_for(uri, proxy)
+            http.request_get(uri.request_uri) do |response|
+              response.body = ResponseFetcher.read_body(http, response, MAX_HTML_BYTES)
+            end
           ensure
             @idle_since = monotonic_time
           end
