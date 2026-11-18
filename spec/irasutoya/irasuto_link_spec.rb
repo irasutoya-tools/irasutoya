@@ -28,7 +28,35 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
     end
 
     it 'should return irasuto with image_url' do
-      expect(irasuto_link.fetch_irasuto.image_url).to eq('https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
+      expect(irasuto_link.fetch_irasuto.image_url).to eq('http://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
+    end
+
+    context 'when the page has relative and absolute image sources' do
+      let(:irasuto_link) do
+        Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'https://www.irasutoya.com/2026/11/detail.html')
+      end
+
+      before do
+        allow(URI).to receive_message_chain(:parse, :open).and_return(<<~HTML)
+          <div class="entry">
+            <img src="/images/root.png">
+            <img src="../images/path.png">
+            <img src="//cdn.example.com/protocol.png">
+            <img src="http://cdn.example.com:80/absolute.png">
+          </div>
+        HTML
+      end
+
+      it 'exposes resolved image URLs in document order' do
+        irasuto = irasuto_link.fetch_irasuto
+        expect(irasuto.image_urls).to eq(%w[
+          https://www.irasutoya.com/images/root.png
+          https://www.irasutoya.com/2026/images/path.png
+          https://cdn.example.com/protocol.png
+          http://cdn.example.com:80/absolute.png
+        ])
+        expect(irasuto.image_url).to eq('https://www.irasutoya.com/images/root.png')
+      end
     end
 
     context 'when there are multiple images on a page' do
