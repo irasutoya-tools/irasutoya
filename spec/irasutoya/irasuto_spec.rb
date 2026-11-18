@@ -34,11 +34,12 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       end
     end
     let(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
+    let(:show_fixture) { 'show.html' }
 
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(feed_response)
-      stub_http_document('show.html')
+      stub_http_document(show_fixture)
     end
 
     def feed_uri(index)
@@ -83,7 +84,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       irasuto = Irasutoya::Irasuto.random
       url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
 
-      expect(http_document).to have_received(:open).with(URI.parse(url)).once
+      expect(http_document).to have_received(:open).with(show_uri).once
       expect(irasuto.url).to eq(url)
     end
 
@@ -108,9 +109,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     context 'when there are multiple images on a page' do
-      before do
-        stub_http_document('show_multiple_images.html')
-      end
+      let(:show_fixture) { 'show_multiple_images.html' }
 
       it 'should return random irasuto with image_url' do
         expect(Irasutoya::Irasuto.random.image_url).to eq('https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg')
