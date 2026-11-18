@@ -30,7 +30,7 @@ irasuto.title
 irasuto.description
 irasuto.image_url
 irasuto.image_urls
-irasuto.has_maltiple_images
+irasuto.has_multiple_images
 irasuto.postthumb_image_url
 
 irasuto_links = Irasutoya::Irasuto.search(query: 'おじさん', page: 3) #=> returns array of IrasutoLink instance
