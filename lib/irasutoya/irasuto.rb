@@ -33,12 +33,12 @@ module Irasutoya
 
     class << self
       def random
-        PageLoader.load_detail(random_url)
+        with_fetch_timeout { PageLoader.load_detail(random_url) }
       end
 
       def search(query:, page: 0)
         url = "https://www.irasutoya.com/search?q=#{CGI.escape query}"
-        PageLoader.load_list(url, page: page)
+        with_fetch_timeout { PageLoader.load_list(url, page: page) }
       end
 
       private

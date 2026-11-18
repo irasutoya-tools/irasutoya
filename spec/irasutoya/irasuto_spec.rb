@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
+RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
   describe 'image accessors' do
     it 'keeps single-image results when the constructor array grows' do
       urls = ['first']
@@ -33,14 +33,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         allow(response).to receive(:body).and_return(feed_body)
       end
     end
-    let(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
+    let(:show_url) { 'http://www.irasutoya.com/2014/03/blog-post_5924.html' }
+    let(:page_fixture) { 'show.html' }
+    let(:page_http) { stub_page(page_fixture) }
 
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(feed_response)
-      allow(URI).to receive(:parse).and_call_original
-      allow(URI).to receive(:parse).with(show_uri.to_s).and_return(show_uri)
-      allow(show_uri).to receive(:open).and_return(File.read('spec/files/show.html'))
+      page_http
     end
 
     def feed_uri(index)
@@ -50,14 +50,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     it 'returns the first entry for a draw of zero without requesting index zero' do
       expect(Net::HTTP).to receive(:get_response).with(feed_uri(1)).once.and_return(feed_response)
 
-      expect(described_class.random.url).to eq(show_uri.to_s)
+      expect(described_class.random.url).to eq(show_url)
     end
 
     it 'requests the last reported index for the highest draw' do
       allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
       expect(Net::HTTP).to receive(:get_response).with(feed_uri(feed_count)).and_return(feed_response)
 
-      expect(described_class.random.url).to eq(show_uri.to_s)
+      expect(described_class.random.url).to eq(show_url)
     end
 
     it 'raises an HTTP error before parsing a failed count response' do
@@ -83,10 +83,22 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     it 'should return random irasuto with url' do
       irasuto = Irasutoya::Irasuto.random
-      url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
 
-      expect(show_uri).to have_received(:open).once
-      expect(irasuto.url).to eq(url)
+      expect(irasuto.url).to eq(show_url)
+    end
+
+    it 'fetches the legacy feed link over HTTPS' do
+      Irasutoya::Irasuto.random
+
+      expect(page_http.use_ssl?).to be(true)
+      expect(page_http).to have_received(:get).with(URI.parse(show_url).request_uri).once
+    end
+
+    it 'rejects an off-origin feed link before opening a page connection' do
+      allow(feed_response).to receive(:body).and_return(feed_body.gsub('www.irasutoya.com', 'example.com'))
+      expect(Net::HTTP).not_to receive(:new)
+
+      expect { Irasutoya::Irasuto.random }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
     end
 
     it 'should return random irasuto with title' do
@@ -110,9 +122,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     context 'when there are multiple images on a page' do
-      before do
-        allow(show_uri).to receive(:open).and_return(File.read('spec/files/show_multiple_images.html'))
-      end
+      let(:page_fixture) { 'show_multiple_images.html' }
 
       it 'should return random irasuto with image_url' do
         expect(Irasutoya::Irasuto.random.image_url).to eq('https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg')
@@ -141,34 +151,31 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
   describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
-    let(:expected) do
-      %w[
-        「仕事始め」と「仕事納め」のイラスト文字 福男選びのイラスト 親戚づきあいが苦手な人のイラスト（女性）
-        親戚づきあいが苦手な人のイラスト（男性） 親戚の集まりのイラスト お汁粉のイラスト 日の出に照らされるぴょこのイラスト
-        電子マネー対応の賽銭箱のイラスト（QRコード） 懐中しるこのイラスト 二人羽織のイラスト（女性）
-        獅子舞に頭を噛まれる人のイラスト（女性） 獅子舞に頭を噛まれる人のイラスト（男性） お正月のライン素材（亥年）
-        「2019」のイラスト文字 和服を着た高齢の女性のイラスト 和服を着た高齢の男性のイラスト 和服を着た中年女性のイラスト
-        和服を着た中年男性のイラスト 書き初めをする猪のイラスト（亥年） 福袋を持った猪のイラスト（亥年）
-      ]
-    end
+    let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
+    let(:html) { File.read('spec/files/list.html') }
+    let(:results) { described_class.search(query: query) }
 
-    before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
-    end
+    let(:page_http) { stub_page('list.html') }
 
-    it 'should return irasuto links' do
-      expect(Irasutoya::Irasuto.search(query: query).size).to eq 20
-    end
+    before { page_http }
 
-    it 'should return irasutos' do
-      expect(Irasutoya::Irasuto.search(query: query).map(&:title)).to eq expected
+    include_examples 'ordered list results'
+
+    it 'queries anchors once in each of the twenty result boxes' do
+      document = Nokogiri::HTML.parse(html, nil, 'UTF-8')
+      boxes = document.css('.box')
+      expect(boxes.size).to eq(20)
+      allow(Nokogiri::HTML).to receive(:parse).with(html, nil, 'utf-8').and_return(document)
+      allow(document).to receive(:css).with('.box').and_return(boxes)
+      boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
+
+      results
     end
 
     it 'loads links from the initial search URL with their detail URLs' do
-      link = Irasutoya::Irasuto.search(query: query).first
-      url = 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2'
+      link = results.first
 
-      expect(URI).to have_received(:parse).with(url).once
+      expect(page_http).to have_received(:get).with(URI.parse(search_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end
