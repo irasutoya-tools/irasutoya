@@ -4,14 +4,13 @@ module Irasutoya
       def self.included: (Class) -> void
 
       module Methods
-        def parse_show_page: (document: untyped) -> { title: String, description: String, image_urls: Array[String] }
+        def parse_show_page: (document: untyped, url: String) -> { title: String, description: String, image_urls: Array[String] }
       end
 
       module PrivateMethods
         def self.title_from: (document: untyped) -> String
         def self.description_from: (document: untyped) -> String
-        def self.image_url_from: (document: untyped) -> String
-        def self.image_urls_from: (document: untyped) -> Array[String]
+        def self.image_urls_from: (document: untyped, url: String) -> Array[String]
       end
     end
   end

@@ -31,6 +31,25 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
       expect(irasuto_link.fetch_irasuto.image_url).to eq('https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
     end
 
+    context 'when the page has relative and absolute image sources' do
+      let(:irasuto_link) do
+        Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'https://www.irasutoya.com/2026/11/detail.html')
+      end
+
+      let(:page_http) { stub_page('show_relative_images.html') }
+
+      it 'exposes resolved image URLs in document order' do
+        irasuto = irasuto_link.fetch_irasuto
+        expect(irasuto.image_urls).to eq(%w[
+          https://www.irasutoya.com/images/root.png
+          https://www.irasutoya.com/2026/images/path.png
+          https://cdn.example.com/protocol.png
+          http://cdn.example.com:80/absolute.png
+        ])
+        expect(irasuto.image_url).to eq('https://www.irasutoya.com/images/root.png')
+      end
+    end
+
     context 'when there are multiple images on a page' do
       before do
         stub_page('show_multiple_images.html')
