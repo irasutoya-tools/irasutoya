@@ -20,7 +20,7 @@ module Irasutoya
       module Methods
         def fetch_page_and_parse(url)
           with_fetch_timeout do
-            HTTP_DOCUMENT.open(URI.parse(url)) { |page| Nokogiri::HTML.parse(page.read, nil, page.charset) }
+            HTTP_DOCUMENT.open(URI.parse(url)) { |page| Nokogiri::HTML.parse(page, nil, page.charset) }
           end
         end
 

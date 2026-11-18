@@ -153,7 +153,6 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     let(:query) { '検索' }
     let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
     let(:paginated_url) { "#{search_url}&max-results=20&start=40&by-date=false" }
-    let(:html) { File.read('spec/files/list.html') }
     let(:results) { described_class.search(query: query) }
 
     let(:page_http) { stub_page('list.html') }
@@ -163,12 +162,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     include_examples 'ordered list results'
 
     it 'queries anchors once in each of the twenty result boxes' do
-      document = Nokogiri::HTML.parse(html, nil, 'UTF-8')
-      boxes = document.css('.box')
-      expect(boxes.size).to eq(20)
-      allow(Nokogiri::HTML).to receive(:parse).with(html, nil, 'utf-8').and_return(document)
-      allow(document).to receive(:css).with('.box').and_return(boxes)
-      boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
+      allow(Nokogiri::HTML).to receive(:parse).and_wrap_original do |parse, *args|
+        document = parse.call(*args)
+        boxes = document.css('.box')
+        expect(boxes.size).to eq(20)
+        allow(document).to receive(:css).with('.box').and_return(boxes)
+        boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
+        document
+      end
 
       results
     end

@@ -29,6 +29,13 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
     end
   end
 
+  it 'parses the buffered response directly using the response charset' do
+    stub_page('show.html')
+    expect(Nokogiri::HTML).to receive(:parse).with(an_instance_of(StringIO), nil, 'utf-8').and_call_original
+
+    expect(fetch_page(page_url)).to be_a(Nokogiri::HTML::Document)
+  end
+
   it 'follows relative redirects and upgrades trusted HTTP redirect targets to HTTPS' do
     http = stub_page('show.html')
     allow(http).to receive(:get).with('/page').and_return(redirect_to('/next'))
