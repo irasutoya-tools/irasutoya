@@ -26,9 +26,7 @@ module Irasutoya
           end
 
           def description_from(document:)
-            separators = document.css('.entry .separator')
-            target = separators.length > 1 ? separators[1] : separators[0]
-            target&.text&.strip || ''
+            document.css('.entry .separator').last&.text&.strip || ''
           end
 
           def image_url_from(document:)

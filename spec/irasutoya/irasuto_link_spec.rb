@@ -45,6 +45,24 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
       it 'should return multiple irasutos' do
         expect(irasuto_link.fetch_irasuto.image_urls).to match Array
       end
+
+      it 'returns the description from the second separator' do
+        description = 'かわいい家のキャラクターと「うちで過ごそう」、「家にいよう」「STAY HOME（ステイホーム）」といった、' \
+                      '不要不急の外出を控え自宅待機（外出自粛）を促すメッセージが書かれたイラストです。'
+        expect(irasuto_link.fetch_irasuto.description).to eq(description)
+      end
+    end
+
+    context 'when the page has image groups with headings' do
+      before do
+        allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show_image_groups.html') }
+      end
+
+      it 'returns the full description after the image groups' do
+        description = '既存のイラストと組み合わせて使うことができる、正面、斜め、横、' \
+                      '上からみた白いマスクとフェイスシールド（フェイスガード）単体のイラストです。'
+        expect(irasuto_link.fetch_irasuto.description).to eq(description)
+      end
     end
   end
 end
