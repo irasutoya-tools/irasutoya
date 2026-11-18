@@ -42,6 +42,7 @@ build-iPhoneSimulator/
 ## Environment normalization:
 /.bundle/
 /vendor/bundle
+/vendor/cache/*/rubocop_cache/
 /lib/bundler/man/
 vendor/bundle
 

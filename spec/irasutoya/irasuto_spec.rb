@@ -33,14 +33,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         allow(response).to receive(:body).and_return(feed_body)
       end
     end
-    let!(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
-    let(:show_fixture) { 'spec/files/show.html' }
+    let(:show_url) { 'http://www.irasutoya.com/2014/03/blog-post_5924.html' }
+    let(:page_fixture) { 'show.html' }
+    let(:page_http) { stub_page(page_fixture) }
 
     before do
-      response = double('HTTP response', charset: 'UTF-8', read: File.read(show_fixture))
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(feed_response)
-      allow(OpenURI).to receive(:open_uri).with(show_uri).and_yield(response)
+      page_http
     end
 
     def feed_uri(index)
@@ -50,14 +50,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     it 'returns the first entry for a draw of zero without requesting index zero' do
       expect(Net::HTTP).to receive(:get_response).with(feed_uri(1)).once.and_return(feed_response)
 
-      expect(described_class.random.url).to eq(show_uri.to_s)
+      expect(described_class.random.url).to eq(show_url)
     end
 
     it 'requests the last reported index for the highest draw' do
       allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
       expect(Net::HTTP).to receive(:get_response).with(feed_uri(feed_count)).and_return(feed_response)
 
-      expect(described_class.random.url).to eq(show_uri.to_s)
+      expect(described_class.random.url).to eq(show_url)
     end
 
     it 'raises an HTTP error before parsing a failed count response' do
@@ -83,10 +83,22 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     it 'should return random irasuto with url' do
       irasuto = Irasutoya::Irasuto.random
-      url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
 
-      expect(OpenURI).to have_received(:open_uri).with(show_uri).once
-      expect(irasuto.url).to eq(url)
+      expect(irasuto.url).to eq(show_url)
+    end
+
+    it 'fetches the legacy feed link over HTTPS' do
+      Irasutoya::Irasuto.random
+
+      expect(page_http.use_ssl?).to be(true)
+      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(show_url).request_uri)).once
+    end
+
+    it 'rejects an off-origin feed link before opening a page connection' do
+      allow(feed_response).to receive(:body).and_return(feed_body.gsub('www.irasutoya.com', 'example.com'))
+      expect(Net::HTTP).not_to receive(:new)
+
+      expect { Irasutoya::Irasuto.random }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
     end
 
     it 'should return random irasuto with title' do
@@ -110,7 +122,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     context 'when there are multiple images on a page' do
-      let(:show_fixture) { 'spec/files/show_multiple_images.html' }
+      let(:page_fixture) { 'show_multiple_images.html' }
 
       it 'should return random irasuto with image_url' do
         expect(Irasutoya::Irasuto.random.image_url).to eq('https://1.bp.blogspot.com/-rchqpx0JGcU/XpKozq0JXAI/AAAAAAABYXA/BnJXB5WNKAcjeFC6_t2XPXwu7wUNAhL3gCNcBGAsYHQ/s195/thumbnail_jitakutaiki.jpg')
@@ -144,13 +156,9 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     let(:html) { File.read('spec/files/list.html') }
     let(:results) { described_class.search(query: query) }
 
-    before do
-      response = double('HTTP response', charset: 'UTF-8', read: html)
-      [search_url, paginated_url].each do |url|
-        allow(OpenURI).to receive(:open_uri).with(URI.parse(url)).and_yield(response)
-      end
-      allow(URI).to receive(:parse).and_call_original
-    end
+    let(:page_http) { stub_page('list.html') }
+
+    before { page_http }
 
     include_examples 'ordered list results'
 
@@ -158,7 +166,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       document = Nokogiri::HTML.parse(html, nil, 'UTF-8')
       boxes = document.css('.box')
       expect(boxes.size).to eq(20)
-      allow(Nokogiri::HTML).to receive(:parse).with(html, nil, 'UTF-8').and_return(document)
+      allow(Nokogiri::HTML).to receive(:parse).with(html, nil, 'utf-8').and_return(document)
       allow(document).to receive(:css).with('.box').and_return(boxes)
       boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
 
@@ -168,7 +176,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     it 'loads links from the paginated search URL with their detail URLs' do
       link = Irasutoya::Irasuto.search(query: query, page: 2).first
 
-      expect(URI).to have_received(:parse).with(paginated_url).once
+      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(paginated_url).request_uri)).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end

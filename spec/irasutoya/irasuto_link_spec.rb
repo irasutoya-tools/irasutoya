@@ -2,11 +2,11 @@
 
 RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
   describe '#fetch_irasuto' do # rubocop:disable Metrics/BlockLength
-    let(:irasuto_link) { Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'http://example.com') }
+    let(:irasuto_link) { Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'https://www.irasutoya.com/2014/03/blog-post_5924.html') }
 
-    before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
-    end
+    let(:page_http) { stub_page('show.html') }
+
+    before { page_http }
 
     it 'should return irasuto' do
       expect(irasuto_link.fetch_irasuto).to be_a(Irasutoya::Irasuto)
@@ -15,7 +15,7 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
     it 'should return irasuto with url' do
       irasuto = irasuto_link.fetch_irasuto
 
-      expect(URI).to have_received(:parse).with(irasuto_link.show_url).once
+      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(irasuto_link.show_url).request_uri)).once
       expect(irasuto.url).to eq(irasuto_link.show_url)
     end
 
@@ -33,9 +33,7 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
 
     context 'when there are multiple images on a page' do
       before do
-        allow(URI).to receive_message_chain(:parse, :open) {
-          File.read('spec/files/show_multiple_images.html')
-        }
+        stub_page('show_multiple_images.html')
       end
 
       it 'should return irasuto (postthumb) with image_url' do
