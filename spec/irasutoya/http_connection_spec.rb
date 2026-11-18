@@ -57,6 +57,26 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(disconnections.pop).to equal(requests.pop)
   end
 
+  it 'releases the inherited connection while the child stays alive' do
+    skip 'fork is unavailable' unless Process.respond_to?(:_fork)
+
+    fetch_detail('/before-fork')
+    original_socket = requests.pop
+    reader, writer = IO.pipe
+    child = fork do
+      writer.close
+      reader.read
+    end
+    reader.close
+
+    expect(fetch_detail('/after-fork').title).to eq('/after-fork')
+    expect(requests.pop).to equal(original_socket)
+    expect(disconnections.pop).to equal(original_socket)
+  ensure
+    writer&.close
+    Process.wait(child) if child
+  end
+
   it 'follows a relative redirect on the same connection' do
     expect(fetch_detail('/redirect').title).to eq('/destination')
     expect(requests.pop).to equal(requests.pop)

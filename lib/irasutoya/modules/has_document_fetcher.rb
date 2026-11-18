@@ -50,6 +50,10 @@ module Irasutoya
           @session = session
         end
 
+        def close_inherited_connections
+          @session.close_inherited_connections
+        end
+
         private
 
         def track_redirect(uri, visited, document)
@@ -99,6 +103,11 @@ module Irasutoya
           session.get(uri) { @lock.synchronize { @users[key] -= 1 } }
         end
 
+        def close_inherited_connections
+          @sessions.each_value(&:close_inherited_connection)
+          initialize
+        end
+
         def initialize
           @lock = Mutex.new
           @sessions = {}
@@ -133,6 +142,13 @@ module Irasutoya
         def initialize(&on_idle)
           @lock = Mutex.new
           @on_idle = on_idle
+        end
+
+        def close_inherited_connection
+          # Close only the child's descriptor so TLS shutdown cannot affect the parent.
+          buffered_socket = @http&.instance_variable_get(:@socket)
+          socket = buffered_socket&.io&.to_io
+          socket.close if socket && !socket.closed?
         end
 
         private
@@ -171,7 +187,15 @@ module Irasutoya
       end
 
       HTTP_DOCUMENT = HttpDocument.new(HttpSessionPool.new)
-      private_constant :HttpDocument, :HttpSessionPool, :HttpSession, :HTTP_DOCUMENT
+
+      module ForkCleanup
+        def _fork
+          super.tap { |pid| HTTP_DOCUMENT.close_inherited_connections if pid.zero? }
+        end
+      end
+
+      Process.singleton_class.prepend(ForkCleanup) if Process.respond_to?(:_fork)
+      private_constant :HttpDocument, :HttpSessionPool, :HttpSession, :HTTP_DOCUMENT, :ForkCleanup
     end
   end
 end

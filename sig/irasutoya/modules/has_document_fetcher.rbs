@@ -18,6 +18,7 @@ module Irasutoya
 
         def open: [Result] (untyped) { (untyped) -> Result } -> Result
         def initialize: (HttpSessionPool) -> void
+        def close_inherited_connections: () -> void
 
         private
 
@@ -35,6 +36,7 @@ module Irasutoya
 
         def get: (untyped) -> untyped
         def initialize: () -> void
+        def close_inherited_connections: () -> void
 
         private
 
@@ -51,6 +53,7 @@ module Irasutoya
 
         def get: (untyped) { () -> void } -> untyped
         def initialize: () { () -> void } -> void
+        def close_inherited_connection: () -> void
 
         private
 
@@ -61,6 +64,10 @@ module Irasutoya
       end
 
       HTTP_DOCUMENT: HttpDocument
+
+      module ForkCleanup
+        def _fork: () -> Integer
+      end
     end
   end
 end
