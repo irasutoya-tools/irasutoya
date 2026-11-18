@@ -91,7 +91,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       Irasutoya::Irasuto.random
 
       expect(page_http.use_ssl?).to be(true)
-      expect(page_http).to have_received(:request).with(have_attributes(path: '/2014/03/blog-post_5924.html'))
+      expect(page_http).to have_received(:request).with(have_attributes(path: URI.parse(show_url).request_uri)).once
     end
 
     it 'rejects an off-origin feed link before opening a page connection' do
