@@ -10,23 +10,34 @@ require 'bundler/setup'
 require 'irasutoya'
 require_relative 'support/ordered_list_results'
 
-module HtmlResponseHelpers
-  def stub_html_response(fixture, url: nil)
-    uri = url ? URI.parse(url) : anything
-    allow(URI).to receive(:parse).and_call_original
-    allow(OpenURI).to receive(:open_uri).with(uri) do |&parse|
-      File.open(File.join(__dir__, 'files', fixture), 'rb') do |response|
-        allow(response).to receive(:charset).and_return('UTF-8')
-        allow(response).to receive(:read).and_call_original
-        expect(response).not_to receive(:read).with(no_args)
-        parse.call(response)
-      end
+module PageFixtures
+  def stub_page(filename)
+    response = Net::HTTPOK.new('1.1', '200', 'OK')
+    response['Content-Type'] = 'text/html; charset=UTF-8'
+    allow(response).to receive(:body).and_return(File.read("spec/files/#{filename}"))
+    stub_page_http.tap { |http| allow(http).to receive(:get).and_return(response) }
+  end
+
+  def stub_page_http
+    http = Net::HTTP.new('www.irasutoya.com', 443, nil)
+    allow(http).to receive(:start) do
+      allow(http).to receive(:started?).and_return(true)
+      http
     end
+    allow(http).to receive(:finish)
+    allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, any_args).and_return(http)
+    http
   end
 end
 
 RSpec.configure do |config|
-  config.include HtmlResponseHelpers
+  config.include PageFixtures
+
+  config.before do
+    fetcher = Irasutoya::Modules::HasDocumentFetcher
+    pool = fetcher.const_get(:HttpSessionPool).new
+    stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(pool))
+  end
 
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = '.rspec_status'

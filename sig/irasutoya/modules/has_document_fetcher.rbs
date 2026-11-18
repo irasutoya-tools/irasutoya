@@ -3,6 +3,9 @@ module Irasutoya
     module HasDocumentFetcher
       FETCH_TIMEOUT: Integer
 
+      class FetchDeadlineExceeded < StandardError
+      end
+
       def self.included: (Class) -> void
 
       module Methods
@@ -11,7 +14,67 @@ module Irasutoya
         private
 
         def with_fetch_timeout: [A] () { (Numeric) -> A } -> A
-        def read_document: (String) -> untyped
+      end
+
+      class HttpDocument
+        TRUSTED_HOST: String
+        REDIRECT_CODES: Array[String]
+        MAX_REDIRECTS: Integer
+        @session: HttpSessionPool
+
+        def open: [Result] (untyped) { (untyped) -> Result } -> Result
+        def initialize: (HttpSessionPool) -> void
+        def close_inherited_connections: () -> void
+
+        private
+
+        def fetch_page: [Result] (untyped, Integer) { (untyped) -> Result } -> Result
+        def trusted_page_uri: (untyped) -> untyped
+        def redirect: (untyped, untyped, untyped) -> untyped
+        def response_document: (untyped, untyped) -> untyped
+      end
+
+      class HttpSessionPool
+        type origin = [Integer, String, String, Integer, String?]
+
+        @lock: Mutex
+        @sessions: Hash[origin, HttpSession]
+        @users: Hash[origin, Integer]
+
+        def get: (untyped) -> untyped
+        def initialize: () -> void
+        def close_inherited_connections: () -> void
+
+        private
+
+        def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
+        def acquire_session: (origin) -> HttpSession
+        def remove_idle_session: (origin) -> bool
+      end
+
+      class HttpSession
+        IDLE_TIMEOUT: Float
+        @lock: Mutex
+        @on_idle: ^() -> bool
+        @http: untyped
+        @idle_since: Float
+
+        def get: (untyped, untyped) -> untyped
+        def initialize: () { () -> bool } -> void
+        def close_inherited_connection: () -> void
+
+        private
+
+        def session_for: (untyped, untyped) -> untyped
+        def close_when_idle: () -> void
+        def remaining_idle_time: () -> Float
+        def monotonic_time: () -> Float
+      end
+
+      HTTP_DOCUMENT: HttpDocument
+
+      module ForkCleanup
+        def _fork: () -> Integer
       end
     end
   end
