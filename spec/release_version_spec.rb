@@ -18,7 +18,9 @@ RSpec.describe 'Release version bump' do
         expected = next_version.call(*version.split('.').map(&:to_i)).join('.')
 
         run_command({ 'BUNDLE_FROZEN' => 'true', 'BUNDLE_GEMFILE' => File.join(project, 'Gemfile') },
-                    'bundle', 'exec', 'gem', 'bump', '--version', level, '--no-commit', chdir: checkout)
+                    'bundle', 'exec', 'ruby', '-rrubygems/command', '-rgem/release', '-rrubygems/commands/bump_command',
+                    '-e', 'Gem::Commands::BumpCommand.new.invoke(*ARGV)', '--',
+                    '--version', level, '--no-commit', chdir: checkout)
 
         expect(File.read(version_file)).to include("VERSION = '#{expected}'")
       end

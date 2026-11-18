@@ -36,7 +36,10 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
           git status
-          BUNDLE_FROZEN=true bundle exec gem bump --version "$RELEASE_VERSION" --message ':tada: Bump %{name} to %{version}'
+          # Load the locked command directly so RubyGems plugin discovery is not needed.
+          BUNDLE_FROZEN=true bundle exec ruby -rrubygems/command -rgem/release -rrubygems/commands/bump_command \
+            -e 'Gem::Commands::BumpCommand.new.invoke(*ARGV)' -- \
+            --version "$RELEASE_VERSION" --message ':tada: Bump %{name} to %{version}'
           git status
           bundle config set frozen false
           bundle install --local

@@ -85,7 +85,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       irasuto = Irasutoya::Irasuto.random
       url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
 
-      expect(URI).to have_received(:parse).with(url).once
+      expect(show_uri).to have_received(:open).once
       expect(irasuto.url).to eq(url)
     end
 
