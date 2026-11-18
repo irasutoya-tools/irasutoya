@@ -29,7 +29,7 @@ module Irasutoya
           return response.fetch('location') if REDIRECT_CODES.include?(response.code)
 
           response.value
-          body = read_body(response, max_bytes)
+          body = read_body(http, response, max_bytes)
         end
         [body, response['content-type']]
       end
@@ -44,17 +44,27 @@ module Irasutoya
     end
     private_class_method :redirect_uri
 
-    def self.read_body(response, max_bytes)
+    def self.read_body(http, response, max_bytes)
       body = ''.b
       response.read_body do |chunk|
-        if body.bytesize + chunk.bytesize > max_bytes
-          raise ResponseTooLargeError, "HTTP response exceeds the #{max_bytes}-byte limit"
-        end
+        abort_download(http, max_bytes) if body.bytesize + chunk.bytesize > max_bytes
 
         body << chunk
       end
       body
+    rescue IOError => e
+      # Net::HTTP can try to read the chunk terminator while unwinding.
+      cause = e.cause
+      raise cause if cause.is_a?(ResponseTooLargeError)
+
+      raise
     end
     private_class_method :read_body
+
+    def self.abort_download(http, max_bytes)
+      http.finish
+      raise ResponseTooLargeError, "HTTP response exceeds the #{max_bytes}-byte limit"
+    end
+    private_class_method :abort_download
   end
 end

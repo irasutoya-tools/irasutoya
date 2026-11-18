@@ -19,6 +19,13 @@ RSpec.describe Irasutoya::ResponseFetcher do
     end
   end
 
+  it 'closes an oversized chunked response before receiving the chunk terminator' do
+    with_response('Transfer-Encoding: chunked', "4\r\nabcd\r\n4\r\nefgh") do |url|
+      expect { described_class.get(url, max_bytes: 7) }
+        .to raise_error(Irasutoya::ResponseTooLargeError, 'HTTP response exceeds the 7-byte limit')
+    end
+  end
+
   it 'enforces the limit on decompressed bytes' do
     compressed = Zlib.gzip('a' * 1024)
     headers = "Content-Encoding: gzip\r\nContent-Length: #{compressed.bytesize}"
