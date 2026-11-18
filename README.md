@@ -72,6 +72,22 @@ irasuto_link.show_url
 irasuto = irasuto_link.fetch_irasuto #=> returns Irasuto instance
 ```
 
+### Open a saved or shared post URL
+
+Pass an absolute post URL on `www.irasutoya.com` to `Irasutoya::Irasuto.from_url`.
+The URL can come from a pasted link or a previously selected illustration:
+
+```ruby
+saved_url = irasuto.url
+reopened = Irasutoya::Irasuto.from_url(saved_url)
+puts reopened.title
+puts reopened.description
+puts reopened.image_url
+```
+
+`from_url` raises `ArgumentError` for relative paths, URLs outside the trusted origin,
+and pages that load successfully but do not contain an illustration post.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/irasutoya-tools/irasutoya. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
