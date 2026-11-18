@@ -1,6 +1,11 @@
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      FETCH_TIMEOUT: Integer
+
+      class FetchDeadlineExceeded < StandardError
+      end
+
       def self.included: (Class) -> void
 
       module Methods
@@ -8,6 +13,8 @@ module Irasutoya
 
         private
 
+        def with_fetch_timeout: [A] () { (Numeric) -> A } -> A
+        def read_document: (String) -> untyped
         def parse_document: (untyped) -> untyped
       end
 
@@ -40,19 +47,20 @@ module Irasutoya
 
         private
 
-        def remove_idle_session: (origin) -> void
+        def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
+        def acquire_session: (origin) -> HttpSession
+        def remove_idle_session: (origin) -> bool
       end
 
       class HttpSession
         IDLE_TIMEOUT: Float
         @lock: Mutex
-        @on_idle: ^() -> void
+        @on_idle: ^() -> bool
         @http: untyped
         @idle_since: Float
-        @reaper: Thread?
 
-        def get: (untyped, untyped) { () -> void } -> untyped
-        def initialize: () { () -> void } -> void
+        def get: (untyped, untyped) -> untyped
+        def initialize: () { () -> bool } -> void
         def close_inherited_connection: () -> void
 
         private

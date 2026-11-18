@@ -8,6 +8,7 @@ end
 
 require 'bundler/setup'
 require 'irasutoya'
+require_relative 'support/ordered_list_results'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

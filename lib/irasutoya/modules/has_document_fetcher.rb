@@ -1,10 +1,16 @@
 # frozen_string_literal: true
 
 require 'stringio'
+require 'timeout'
 
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      FETCH_TIMEOUT = 10
+
+      # Net::HTTP retries Timeout::Error, so translate the deadline at the fetch boundary.
+      class FetchDeadlineExceeded < StandardError; end
+
       def self.included(klass)
         super
         klass.send(:include, Irasutoya::Modules::HasDocumentFetcher::Methods)
@@ -13,13 +19,23 @@ module Irasutoya
 
       module Methods
         def fetch_page_and_parse(url)
+          with_fetch_timeout { read_document(url) }
+        end
+
+        private
+
+        def with_fetch_timeout(&)
+          Timeout.timeout(FETCH_TIMEOUT, FetchDeadlineExceeded, &)
+        rescue FetchDeadlineExceeded => e
+          raise Timeout::Error, e.message
+        end
+
+        def read_document(url)
           uri = URI.parse(url)
           return uri.open { |document| parse_document(document) } unless uri.is_a?(URI::HTTP)
 
           HTTP_DOCUMENT.open(uri) { |document| parse_document(document) }
         end
-
-        private
 
         def parse_document(document)
           Nokogiri::HTML.parse(document.read, nil, document.charset)
@@ -97,11 +113,7 @@ module Irasutoya
           proxy = uri.find_proxy
           # @type var key: origin
           key = [Process.pid, uri.scheme, uri.hostname, uri.port, proxy&.to_s]
-          session = @lock.synchronize do
-            @users[key] += 1
-            @sessions[key] ||= HttpSession.new { remove_idle_session(key) }
-          end
-          session.get(uri, proxy) { @lock.synchronize { @users[key] -= 1 } }
+          with_session(key) { |session| session.get(uri, proxy) }
         end
 
         def close_inherited_connections
@@ -117,12 +129,33 @@ module Irasutoya
 
         private
 
+        def with_session(key)
+          # @type var thread: untyped
+          thread = Thread
+          thread.handle_interrupt(FetchDeadlineExceeded => :never) do
+            session = acquire_session(key)
+            begin
+              thread.handle_interrupt(FetchDeadlineExceeded => :immediate) { yield session }
+            ensure
+              @lock.synchronize { @users[key] -= 1 }
+            end
+          end
+        end
+
+        def acquire_session(key)
+          @lock.synchronize do
+            @users[key] += 1
+            @sessions[key] ||= HttpSession.new { remove_idle_session(key) }
+          end
+        end
+
         def remove_idle_session(key)
           @lock.synchronize do
-            return unless @users[key].zero?
+            return false unless @users[key].zero?
 
             @sessions.delete(key)
             @users.delete(key)
+            true
           end
         end
       end
@@ -135,14 +168,14 @@ module Irasutoya
             session_for(uri, proxy).get(uri.request_uri)
           ensure
             @idle_since = monotonic_time
-            @reaper = Thread.new { close_when_idle } unless @reaper&.alive?
-            yield
           end
         end
 
         def initialize(&on_idle)
           @lock = Mutex.new
           @on_idle = on_idle
+          @idle_since = monotonic_time
+          Thread.new { close_when_idle }
         end
 
         def close_inherited_connection
@@ -179,9 +212,7 @@ module Irasutoya
           return remaining if remaining.positive?
 
           @http.finish if @http&.started?
-          @on_idle.call
-          @reaper = nil
-          remaining
+          @on_idle.call ? remaining : IDLE_TIMEOUT
         end
 
         def monotonic_time
@@ -198,7 +229,8 @@ module Irasutoya
       end
 
       Process.singleton_class.prepend(ForkCleanup) if Process.respond_to?(:_fork)
-      private_constant :HttpDocument, :HttpSessionPool, :HttpSession, :HTTP_DOCUMENT, :ForkCleanup
+      private_constant :FetchDeadlineExceeded, :HttpDocument, :HttpSessionPool, :HttpSession, :HTTP_DOCUMENT,
+                       :ForkCleanup
     end
   end
 end
