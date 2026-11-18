@@ -62,6 +62,8 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
 
     it 'loads links from the category URL with their detail URLs' do
+      allow(URI).to receive(:parse).and_call_original
+
       link = category.fetch_irasuto_links.first
 
       expect(URI).to have_received(:parse).with(category.list_url).once
