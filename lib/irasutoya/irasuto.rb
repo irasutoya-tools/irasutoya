@@ -6,25 +6,34 @@ module Irasutoya
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
 
-    attr_reader :url, :title, :description, :image_urls, :postthumb_image_url, :image_url, :has_multiple_images
+    attr_reader :url, :title, :description
 
     def initialize(url:, title:, description:, image_urls:)
       @url = url
       @title = title
       @description = description
-      @image_urls = image_urls
-      @has_multiple_images = image_urls.size > 1
-      @postthumb_image_url = image_urls.first if @has_multiple_images
-      @image_url = image_urls.first
+      @image_urls = image_urls.dup
+    end
+
+    def image_urls
+      @image_urls.dup
+    end
+
+    def image_url
+      @image_urls.first
+    end
+
+    def postthumb_image_url
+      image_url if has_multiple_images
+    end
+
+    def has_multiple_images # rubocop:disable Naming/PredicateMethod, Naming/PredicatePrefix
+      @image_urls.size > 1
     end
 
     class << self
       def random
-        url = random_url
-        document = fetch_page_and_parse(url)
-        parsed = parse_show_page(document: document)
-
-        Irasuto.new(url: url, title: parsed[:title], description: parsed[:description], image_urls: parsed[:image_urls])
+        PageLoader.load_detail(random_url)
       end
 
       def search(query:, page: 0)
@@ -34,29 +43,26 @@ module Irasutoya
                 "https://www.irasutoya.com/search?q=#{CGI.escape query}&max-results=20&start=#{page * 20}&by-date=false"
               end
 
-        document = fetch_page_and_parse(url)
-        parse_list_page(document: document).map do |parsed|
-          IrasutoLink.new(title: parsed[:title], show_url: parsed[:show_url])
-        end
+        PageLoader.load_list(url)
       end
 
       private
 
-      def random_api_path
-        max_index = 22_208
-        luck = Random.rand(max_index)
-        "/feeds/posts/summary?start-index=#{luck}&max-results=1&alt=json-in-script"
+      def fetch_feed(index)
+        url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
+        response = Net::HTTP.get_response(URI.parse(url))
+        response.value
+        JSON.parse(response.body[/{.+}/]).fetch('feed')
       end
 
       def random_url
-        jsonp = Net::HTTP.get(URI.parse("https://www.irasutoya.com#{random_api_path}"))
-        JSON.parse(jsonp[/{.+}/]) # rubocop:disable Style/SingleArgumentDig
-            .dig('feed', 'entry')
-            .first
-            .dig('link')
-            .select { |link| link['rel'] == 'alternate' }
-            .first
-            .dig('href')
+        feed = fetch_feed(1)
+        count = Integer(feed.dig('openSearch$totalResults', '$t'), 10)
+        raise 'Illustration feed has no entries' if count.zero?
+
+        index = Random.rand(count) + 1
+        feed = fetch_feed(index) unless index == 1
+        feed.fetch('entry').first.fetch('link').find { |link| link['rel'] == 'alternate' }.fetch('href')
       end
     end
   end

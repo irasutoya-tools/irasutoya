@@ -10,10 +10,10 @@ require 'bundler/setup'
 require 'irasutoya'
 
 module HtmlResponseHelpers
-  def stub_html_response(fixture)
-    uri = double('URI')
-    allow(URI).to receive(:parse).and_return(uri)
-    allow(uri).to receive(:open) do |&parse|
+  def stub_html_response(fixture, url: nil)
+    uri = url ? URI.parse(url) : anything
+    allow(URI).to receive(:parse).and_call_original
+    allow(OpenURI).to receive(:open_uri).with(uri) do |&parse|
       File.open(File.join(__dir__, 'files', fixture), 'rb') do |response|
         allow(response).to receive(:charset).and_return('UTF-8')
         allow(response).to receive(:read).and_call_original
