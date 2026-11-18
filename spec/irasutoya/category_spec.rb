@@ -39,13 +39,24 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   end
 
   describe '#fetch_irasuto_links' do
-    let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: 'https://www.irasutoya.com/search/label/お正月') }
+    let(:list_url) { 'https://www.irasutoya.com/search/label/%E3%81%8A%E6%AD%A3%E6%9C%88' }
+    let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: list_url) }
     let(:results) { category.fetch_irasuto_links }
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      response = double('HTTP response', charset: 'UTF-8', read: File.read('spec/files/list.html'))
+      allow(OpenURI).to receive(:open_uri).with(URI.parse(list_url)).and_yield(response)
+      allow(URI).to receive(:parse).and_call_original
     end
 
     include_examples 'ordered list results'
+
+    it 'loads links from the category URL with their detail URLs' do
+      link = results.first
+
+      expect(URI).to have_received(:parse).with(category.list_url).once
+      expect(link).to be_a(Irasutoya::IrasutoLink)
+      expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
+    end
   end
 end

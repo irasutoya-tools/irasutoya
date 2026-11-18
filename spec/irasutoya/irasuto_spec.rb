@@ -1,10 +1,80 @@
 # frozen_string_literal: true
 
 RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
+  describe 'image accessors' do
+    it 'keeps single-image results when the constructor array grows' do
+      urls = ['first']
+      illustration = described_class.new(url: 'page', title: 'Title', description: 'Description', image_urls: urls)
+      urls << 'second'
+
+      expect(illustration.image_urls).to eq(['first'])
+      expect(illustration.image_url).to eq('first')
+      expect(illustration.postthumb_image_url).to be_nil
+      expect(illustration.has_multiple_images).to be(false)
+    end
+
+    it 'keeps multiple-image results when the returned array is cleared' do
+      urls = %w[first second]
+      illustration = described_class.new(url: 'page', title: 'Title', description: 'Description', image_urls: urls)
+      illustration.image_urls.clear
+
+      expect(illustration.image_urls).to eq(%w[first second])
+      expect(illustration.image_url).to eq('first')
+      expect(illustration.postthumb_image_url).to eq('first')
+      expect(illustration.has_multiple_images).to be(true)
+    end
+  end
+
   describe '#random' do # rubocop:disable Metrics/BlockLength
+    let(:feed_body) { File.read('spec/files/posts_summary.jsonp') }
+    let(:feed_count) { 22_312 }
+    let(:feed_response) do
+      Net::HTTPOK.new('1.1', '200', 'OK').tap do |response|
+        allow(response).to receive(:body).and_return(feed_body)
+      end
+    end
+    let(:show_uri) { URI.parse('http://www.irasutoya.com/2014/03/blog-post_5924.html') }
+
     before do
-      allow(Net::HTTP).to receive(:get) { File.read('spec/files/posts_summary.jsonp') }
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/show.html') }
+      allow(Random).to receive(:rand).with(feed_count).and_return(0)
+      allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(feed_response)
+      allow(show_uri).to receive(:open).and_return(File.read('spec/files/show.html'))
+      allow(URI).to receive(:parse).and_call_original
+      allow(URI).to receive(:parse).with(show_uri.to_s).and_return(show_uri)
+    end
+
+    def feed_uri(index)
+      URI.parse("https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script")
+    end
+
+    it 'returns the first entry for a draw of zero without requesting index zero' do
+      expect(Net::HTTP).to receive(:get_response).with(feed_uri(1)).once.and_return(feed_response)
+
+      expect(described_class.random.url).to eq(show_uri.to_s)
+    end
+
+    it 'requests the last reported index for the highest draw' do
+      allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
+      expect(Net::HTTP).to receive(:get_response).with(feed_uri(feed_count)).and_return(feed_response)
+
+      expect(described_class.random.url).to eq(show_uri.to_s)
+    end
+
+    it 'raises an HTTP error before parsing a failed count response' do
+      response = Net::HTTPBadRequest.new('1.1', '400', 'Bad Request')
+      allow(Net::HTTP).to receive(:get_response).with(feed_uri(1)).and_return(response)
+      expect(response).not_to receive(:body)
+
+      expect { described_class.random }.to raise_error(Net::HTTPClientException, /400.*Bad Request/)
+    end
+
+    it 'raises an HTTP error before parsing a failed entry response' do
+      response = Net::HTTPServiceUnavailable.new('1.1', '503', 'Service Unavailable')
+      allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
+      allow(Net::HTTP).to receive(:get_response).with(feed_uri(feed_count)).and_return(response)
+      expect(response).not_to receive(:body)
+
+      expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
     end
 
     it 'should return random irasuto' do
@@ -12,7 +82,11 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     it 'should return random irasuto with url' do
-      expect(Irasutoya::Irasuto.random.url).to eq('http://www.irasutoya.com/2014/03/blog-post_5924.html')
+      irasuto = Irasutoya::Irasuto.random
+      url = 'http://www.irasutoya.com/2014/03/blog-post_5924.html'
+
+      expect(URI).to have_received(:parse).with(url).once
+      expect(irasuto.url).to eq(url)
     end
 
     it 'should return random irasuto with title' do
@@ -37,9 +111,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
 
     context 'when there are multiple images on a page' do
       before do
-        allow(URI).to receive_message_chain(:parse, :open) {
-          File.read('spec/files/show_multiple_images.html')
-        }
+        allow(show_uri).to receive(:open).and_return(File.read('spec/files/show_multiple_images.html'))
       end
 
       it 'should return random irasuto with image_url' do
@@ -67,25 +139,40 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
   end
 
-  describe '#search' do
+  describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
+    let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
+    let(:paginated_url) { "#{search_url}&max-results=20&start=40&by-date=false" }
+    let(:html) { File.read('spec/files/list.html') }
     let(:results) { described_class.search(query: query) }
 
     before do
-      allow(URI).to receive_message_chain(:parse, :open) { File.read('spec/files/list.html') }
+      response = double('HTTP response', charset: 'UTF-8', read: html)
+      [search_url, paginated_url].each do |url|
+        allow(OpenURI).to receive(:open_uri).with(URI.parse(url)).and_yield(response)
+      end
+      allow(URI).to receive(:parse).and_call_original
     end
 
     include_examples 'ordered list results'
 
     it 'queries anchors once in each of the twenty result boxes' do
-      document = Nokogiri::HTML.parse(File.read('spec/files/list.html'))
+      document = Nokogiri::HTML.parse(html, nil, 'UTF-8')
       boxes = document.css('.box')
       expect(boxes.size).to eq(20)
-      allow(described_class).to receive(:fetch_page_and_parse).and_return(document)
+      allow(Nokogiri::HTML).to receive(:parse).with(html, nil, 'UTF-8').and_return(document)
       allow(document).to receive(:css).with('.box').and_return(boxes)
       boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
 
       results
+    end
+
+    it 'loads links from the paginated search URL with their detail URLs' do
+      link = Irasutoya::Irasuto.search(query: query, page: 2).first
+
+      expect(URI).to have_received(:parse).with(paginated_url).once
+      expect(link).to be_a(Irasutoya::IrasutoLink)
+      expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end
   end
 end
