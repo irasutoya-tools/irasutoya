@@ -2,5 +2,6 @@
 
 target :lib do
   signature 'sig'
+  library 'timeout'
   check 'lib'
 end
