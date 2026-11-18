@@ -54,7 +54,9 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
 
     before do
       response = double('HTTP response', charset: 'UTF-8', read: File.read('spec/files/list.html'))
-      allow(OpenURI).to receive(:open_uri).with(URI.parse(list_url)).and_yield(response)
+      uri = URI.parse(list_url)
+      allow(URI).to receive(:parse).with(list_url).and_return(uri)
+      allow(OpenURI).to receive(:open_uri).with(uri).and_yield(response)
     end
 
     it 'should return irasuto links' do

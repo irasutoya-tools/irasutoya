@@ -20,7 +20,11 @@ module Irasutoya
 
     class << self
       def random
-        PageLoader.load_detail(random_url)
+        PageLoader.load_detail(
+          random_url,
+          fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+          parse: ->(document:) { parse_show_page(document: document) }
+        )
       end
 
       def search(query:, page: 0)
@@ -30,7 +34,11 @@ module Irasutoya
                 "https://www.irasutoya.com/search?q=#{CGI.escape query}&max-results=20&start=#{page * 20}&by-date=false"
               end
 
-        PageLoader.load_list(url)
+        PageLoader.load_list(
+          url,
+          fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+          parse: ->(document:) { parse_list_page(document: document) }
+        )
       end
 
       private
