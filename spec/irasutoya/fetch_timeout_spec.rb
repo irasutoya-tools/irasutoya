@@ -43,18 +43,24 @@ RSpec.describe 'Illustration fetch deadlines' do
     expect(@requests.pop(true)).to start_with('GET /detail ')
   end
 
-  it 'shares the deadline across the random feed and detail requests' do
-    feed = JSON.generate(feed: { entry: [{ link: [{ rel: 'alternate', href: "#{base_url}/detail" }] }] })
+  it 'shares the deadline across both random feed requests and the detail request' do
+    feed = JSON.generate(feed: {
+                           'openSearch$totalResults' => { '$t' => '2' },
+                           'entry' => [{ link: [{ rel: 'alternate', href: "#{base_url}/detail" }] }]
+                         })
     serve(
-      response('200 OK', body: "callback(#{feed});", delay: 0.35),
+      response('200 OK', body: "callback(#{feed});", delay: 0.15),
+      response('200 OK', body: "callback(#{feed});", delay: 0.15),
       response('200 OK', body: File.read('spec/files/show.html'), delay: 0.35)
     )
-    allow(URI).to receive(:open).and_wrap_original do |open, _url, &block|
-      open.call("#{base_url}/feed", &block)
+    allow(Random).to receive(:rand).with(2).and_return(1)
+    allow(Net::HTTP).to receive(:get_response).and_wrap_original do |get_response, uri|
+      get_response.call(URI.parse("#{base_url}/feed?#{uri.query}"))
     end
 
     expect_timeout { Irasutoya::Irasuto.random }
-    expect(@requests.pop(true)).to start_with('GET /feed ')
+    expect(@requests.pop(true)).to start_with('GET /feed?start-index=1&')
+    expect(@requests.pop(true)).to start_with('GET /feed?start-index=2&')
     expect(@requests.pop(true)).to start_with('GET /detail ')
   end
 

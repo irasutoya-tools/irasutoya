@@ -2,7 +2,6 @@
 
 [![Gem Version](https://badge.fury.io/rb/irasutoya.svg)](https://badge.fury.io/rb/irasutoya)
 [![Code Climate](https://codeclimate.com/github/irasutoya-tools/irasutoya/badges/gpa.svg)](https://codeclimate.com/github/irasutoya-tools/irasutoya)
-[![codecov](https://codecov.io/gh/irasutoya-tools/irasutoya/branch/master/graph/badge.svg)](https://codecov.io/gh/irasutoya-tools/irasutoya)
 [![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/irasutoya-tools/irasutoya.svg)](https://libraries.io/github/irasutoya-tools/irasutoya)
 ![](http://ruby-gem-downloads-badge.herokuapp.com/irasutoya?type=total)
 ![GitHub](https://img.shields.io/github/license/irasutoya-tools/irasutoya.svg)
@@ -22,7 +21,7 @@ gem 'irasutoya'
 ```
 ## Usage
 
-Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do the feed and detail requests made by `Irasutoya::Irasuto.random`.
+Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
 
 ```ruby
 # Irasuto
@@ -32,7 +31,7 @@ irasuto.title
 irasuto.description
 irasuto.image_url
 irasuto.image_urls
-irasuto.has_maltiple_images
+irasuto.has_multiple_images
 irasuto.postthumb_image_url
 
 irasuto_links = Irasutoya::Irasuto.search(query: 'おじさん', page: 3) #=> returns array of IrasutoLink instance
