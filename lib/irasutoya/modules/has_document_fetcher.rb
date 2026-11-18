@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
+require 'timeout'
+
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      FETCH_TIMEOUT = 10
+
       def self.included(klass)
         super
         klass.send(:include, Irasutoya::Modules::HasDocumentFetcher::Methods)
@@ -14,10 +18,14 @@ module Irasutoya
         MAX_REDIRECTS = 10
 
         def fetch_page_and_parse(url)
-          fetch_trusted_page(trusted_page_uri(URI.parse(url)), MAX_REDIRECTS)
+          with_fetch_timeout { fetch_trusted_page(trusted_page_uri(URI.parse(url)), MAX_REDIRECTS) }
         end
 
         private
+
+        def with_fetch_timeout(&)
+          Timeout.timeout(FETCH_TIMEOUT, &)
+        end
 
         def fetch_trusted_page(uri, redirects_left)
           uri.open(redirect: false) { |page| Nokogiri::HTML.parse(page.read, nil, page.charset) }

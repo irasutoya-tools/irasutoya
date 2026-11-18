@@ -1,6 +1,8 @@
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      FETCH_TIMEOUT: Integer
+
       def self.included: (Class) -> void
 
       module Methods
@@ -11,6 +13,7 @@ module Irasutoya
 
         private
 
+        def with_fetch_timeout: [A] () { (Numeric) -> A } -> A
         def fetch_trusted_page: (untyped, Integer) -> untyped
         def trusted_page_uri: (untyped) -> untyped
       end

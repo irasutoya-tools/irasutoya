@@ -8,6 +8,7 @@ end
 
 require 'bundler/setup'
 require 'irasutoya'
+require_relative 'support/ordered_list_results'
 
 module PageFixtures
   def stub_page(filename)
