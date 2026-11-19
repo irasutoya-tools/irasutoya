@@ -23,6 +23,13 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
     end
 
+    it 'rejects a titled post with only missing or blank image sources' do
+      stub_page('show_without_image_sources.html')
+
+      expect { described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html') }
+        .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
+    end
+
     it 'rejects off-origin URLs and relative paths before opening a connection' do
       expect(Net::HTTP).not_to receive(:new)
 
