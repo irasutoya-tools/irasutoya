@@ -100,6 +100,8 @@ module Irasutoya
       class HttpSessionPool
         def get(uri)
           proxy = uri.find_proxy
+          raise "Unsupported proxy scheme: #{proxy.scheme}" if proxy && proxy.scheme != 'http'
+
           # @type var key: origin
           key = [Process.pid, uri.scheme, uri.hostname, uri.port, proxy&.to_s]
           with_session(key) { |session| session.get(uri, proxy) }
@@ -181,7 +183,6 @@ module Irasutoya
 
         def session_for(uri, proxy)
           return @http if @http&.started?
-          raise "Non-HTTP proxy URI: #{proxy}" if proxy && proxy.scheme != 'http'
 
           proxy_user, proxy_password = proxy&.userinfo&.split(':')
           @http = Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password)
