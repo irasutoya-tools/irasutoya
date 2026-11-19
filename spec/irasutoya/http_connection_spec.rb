@@ -106,6 +106,14 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(requests.pop).to equal(requests.pop)
   end
 
+  it 'resolves relative image URLs against the redirect destination directory' do
+    illustration = fetch_detail('/legacy/item.html')
+    image_url = "#{trusted_origin}/2024/08/art.png"
+
+    expect(illustration.image_url).to eq(image_url)
+    expect(illustration.image_urls).to eq([image_url])
+  end
+
   it 'fetches another origin while the first origin is waiting for a response' do
     other_listener = TCPServer.new('127.0.0.1', 0)
     other_origin = "http://127.0.0.1:#{other_listener.addr[1]}"
@@ -170,6 +178,10 @@ RSpec.describe 'Illustration HTTP connections' do
   def response_for(path)
     return "HTTP/1.1 302 Found\r\nLocation: /destination\r\nContent-Length: 0\r\n\r\n" if path == '/redirect'
 
+    if path == '/legacy/item.html'
+      return "HTTP/1.1 302 Found\r\nLocation: /2024/08/item.html\r\nContent-Length: 0\r\n\r\n"
+    end
+
     if path == '/redirect-with-userinfo'
       target = trusted_origin.sub('://', '://user:pass@') + '/destination'
       return "HTTP/1.1 302 Found\r\nLocation: #{target}\r\nContent-Length: 0\r\n\r\n"
@@ -179,6 +191,7 @@ RSpec.describe 'Illustration HTTP connections' do
 
     title, charset = path == '/encoded' ? ['珈琲', 'Shift_JIS'] : [path, 'UTF-8']
     body = %(<div class="post"><div class="title"><h2>#{title}</h2></div></div>).encode(charset)
+    body << '<div class="entry"><img src="art.png"></div>' if path == '/2024/08/item.html'
     http_response('200 OK', body, charset)
   end
 
