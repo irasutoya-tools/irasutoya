@@ -31,14 +31,14 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
       expect(irasuto_link.fetch_irasuto.image_url).to eq('https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
     end
 
-    context 'when the page has relative and absolute image sources' do
+    context 'when the page has invalid, relative, and absolute image sources' do
       let(:irasuto_link) do
         Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'https://www.irasutoya.com/2026/11/detail.html')
       end
 
       let(:page_http) { stub_page('show_relative_images.html') }
 
-      it 'exposes resolved image URLs in document order' do
+      it 'skips missing and blank sources and exposes resolved URLs in document order' do
         irasuto = irasuto_link.fetch_irasuto
         expect(irasuto.image_urls).to eq(%w[
           https://www.irasutoya.com/images/root.png

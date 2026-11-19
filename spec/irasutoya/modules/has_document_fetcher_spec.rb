@@ -30,9 +30,9 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
     end
   end
 
-  it 'parses the buffered response directly using the response charset' do
+  it 'parses the buffered response directly using the response URL and charset' do
     stub_page('show.html')
-    expect(Nokogiri::HTML).to receive(:parse).with(an_instance_of(StringIO), nil, 'utf-8').and_call_original
+    expect(Nokogiri::HTML).to receive(:parse).with(an_instance_of(StringIO), page_url, 'utf-8').and_call_original
 
     expect(fetch_page(page_url)).to be_a(Nokogiri::HTML::Document)
   end

@@ -1,0 +1,10 @@
+module Nokogiri
+  module HTML4
+    def self.parse: (String | _Reader input, ?String? url, ?String? encoding) -> Document
+
+    class Document
+    end
+  end
+
+  module HTML = HTML4
+end
