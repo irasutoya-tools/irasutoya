@@ -13,3 +13,9 @@ updates:
     ignore:
       - dependency-name: parallel
         update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "12:00"
+      timezone: Asia/Tokyo
