@@ -2,6 +2,7 @@ module Irasutoya
   module Modules
     module HasDocumentFetcher
       FETCH_TIMEOUT: Integer
+      MAX_HTML_BYTES: Integer
 
       class FetchDeadlineExceeded < StandardError
       end

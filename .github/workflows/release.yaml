@@ -31,15 +31,18 @@ jobs:
         run: |
           git config --global user.email "unhappychoice@gmail.com"
           git config --global user.name "Yuji Ueki"
-      - name: Install gem-release
-        run: gem install gem-release
       - name: Bump version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           git status
-          gem bump --version ${{inputs.version}} --message ':tada: Bump %{name} to %{version}'
+          # Load the locked command directly so RubyGems plugin discovery is not needed.
+          BUNDLE_FROZEN=true bundle exec ruby -rrubygems/command -rgem/release -rrubygems/commands/bump_command \
+            -e 'Gem::Commands::BumpCommand.new.invoke(*ARGV)' -- \
+            --version "$RELEASE_VERSION" --message ':tada: Bump %{name} to %{version}'
           git status
-          bundle config set frozen false 
-          bundle install
+          bundle config set frozen false
+          bundle install --local
           git add .
           git commit --amend --no-edit
       - uses: rubygems/release-gem@5c53f5308233b7c0f47411f0471b3faae6fa57b2 # v1

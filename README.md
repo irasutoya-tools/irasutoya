@@ -42,6 +42,8 @@ Run `bundle exec ruby find_illustration.rb` from your application directory. The
 ## Usage
 
 Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
+HTML responses are limited to 4 MiB and feed responses to 1 MiB. Fetch operations raise
+`Irasutoya::ResponseTooLargeError` when a response exceeds its limit after decompression.
 
 ```ruby
 # Irasuto
@@ -71,6 +73,22 @@ irasuto_link.show_url
 
 irasuto = irasuto_link.fetch_irasuto #=> returns Irasuto instance
 ```
+
+### Open a saved or shared post URL
+
+Pass an absolute post URL on `www.irasutoya.com` to `Irasutoya::Irasuto.from_url`.
+The URL can come from a pasted link or a previously selected illustration:
+
+```ruby
+saved_url = irasuto.url
+reopened = Irasutoya::Irasuto.from_url(saved_url)
+puts reopened.title
+puts reopened.description
+puts reopened.image_url
+```
+
+`from_url` raises `ArgumentError` for relative paths, URLs outside the trusted origin,
+and pages that load successfully but do not contain an illustration post.
 
 ## Contributing
 

@@ -9,7 +9,9 @@ module Irasutoya
     def self.load_detail: (
       String,
       fetch: ^(String) -> untyped,
-      parse: ^(document: untyped) -> { title: String, description: String, image_urls: Array[String] }
+      parse: Method
     ) -> Irasuto
+
+    private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String] }
   end
 end

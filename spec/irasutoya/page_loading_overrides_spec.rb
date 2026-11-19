@@ -20,9 +20,12 @@ RSpec.describe 'Page loading overrides' do
     it 'builds an illustration from the receiver fetch and parser results' do
       image_urls = ['https://example.com/image.png']
       allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(document)
-      allow(receiver).to receive(:parse_show_page).with(document: document)
-                                                  .and_return(title: 'Custom title', description: 'Custom description',
-                                                              image_urls: image_urls)
+      expected_document = document
+      receiver.define_singleton_method(:parse_show_page) do |document:|
+        raise 'Unexpected document' unless document.equal?(expected_document)
+
+        { title: 'Custom title', description: 'Custom description', image_urls: image_urls }
+      end
 
       expect(illustration).to be_an_instance_of(Irasutoya::Irasuto)
         .and(have_attributes(url: detail_url, title: 'Custom title', description: 'Custom description',
@@ -52,13 +55,30 @@ RSpec.describe 'Page loading overrides' do
     let(:illustration) { receiver.random }
 
     before do
-      response = Net::HTTPOK.new('1.1', '200', 'OK')
-      allow(response).to receive(:body).and_return(File.read('spec/files/posts_summary.jsonp'))
-      allow(Net::HTTP).to receive(:get_response).and_return(response)
+      feed_url = 'https://www.irasutoya.com/feeds/posts/summary?start-index=1&max-results=1&alt=json-in-script'
+      allow(Irasutoya::ResponseFetcher).to receive(:get).with(feed_url, max_bytes: 1024 * 1024, follow_redirects: false)
+                                                      .and_return([File.read('spec/files/posts_summary.jsonp'), nil])
       allow(Random).to receive(:rand).with(22_312).and_return(0)
     end
 
     include_examples 'detail loading with receiver overrides'
+  end
+
+  describe 'saved URL loading' do
+    let(:receiver) { Class.new(Irasutoya::Irasuto) }
+    let(:detail_url) { 'https://www.irasutoya.com/2014/03/blog-post_5924.html' }
+
+    it 'passes the page URL to URL-aware parser overrides' do
+      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(document)
+      expected_document = document
+      receiver.define_singleton_method(:parse_show_page) do |document:, url:|
+        raise 'Unexpected document' unless document.equal?(expected_document)
+
+        { title: 'Saved post', description: '', image_urls: [URI.join(url, 'image.png').to_s] }
+      end
+
+      expect(receiver.from_url(detail_url).image_url).to eq('https://www.irasutoya.com/2014/03/image.png')
+    end
   end
 
   describe 'link traversal' do
