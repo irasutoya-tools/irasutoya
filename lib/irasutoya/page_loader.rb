@@ -15,8 +15,8 @@ module Irasutoya
       end
     end
 
-    def self.load_detail(url)
-      document = fetch_page_and_parse(url)
+    def self.load_detail(url, uri: nil)
+      document = fetch_page_and_parse(url, uri: uri)
       parsed = parse_show_page(document: document, url: document.url)
       Irasuto.new(url: url, title: parsed.fetch(:title), description: parsed.fetch(:description),
                   image_urls: parsed.fetch(:image_urls))

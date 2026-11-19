@@ -37,6 +37,21 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
       end
     end
+
+    it 'rejects malformed URLs before opening a connection' do
+      expect(Net::HTTP).not_to receive(:new)
+
+      ['/search?q=猫', 'https://www.irasutoya.com:bad/post.html'].each do |url|
+        expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Invalid Irasutoya page URL')
+      end
+    end
+
+    it 'preserves URI errors raised while fetching a valid URL' do
+      http = stub_page_http
+      allow(http).to receive(:request_get).and_raise(URI::InvalidURIError)
+
+      expect { described_class.from_url('https://www.irasutoya.com/post.html') }.to raise_error(URI::InvalidURIError)
+    end
   end
 
   describe 'image accessors' do

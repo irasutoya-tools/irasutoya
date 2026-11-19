@@ -10,7 +10,7 @@ module Irasutoya
       def self.included: (Class) -> void
 
       module Methods
-        def fetch_page_and_parse: (String) -> untyped
+        def fetch_page_and_parse: (String, ?uri: URI::Generic?) -> untyped
 
         private
 
@@ -67,6 +67,7 @@ module Irasutoya
         private
 
         def session_for: (untyped, untyped) -> untyped
+        def build_http: (untyped, untyped) -> Net::HTTP
         def close_when_idle: () -> void
         def remaining_idle_time: () -> Float
         def monotonic_time: () -> Float
