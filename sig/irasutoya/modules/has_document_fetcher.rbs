@@ -3,6 +3,7 @@ module Irasutoya
     module HasDocumentFetcher
       FETCH_TIMEOUT: Integer
       MAX_HTML_BYTES: Integer
+      REDIRECT_CODES: Array[String]
 
       class FetchDeadlineExceeded < StandardError
       end
@@ -19,7 +20,6 @@ module Irasutoya
 
       class HttpDocument
         TRUSTED_HOST: String
-        REDIRECT_CODES: Array[String]
         MAX_REDIRECTS: Integer
         @session: HttpSessionPool
 
@@ -66,6 +66,8 @@ module Irasutoya
 
         private
 
+        def request: (untyped, String) -> untyped
+        def unread_redirect_body?: (untyped) -> bool
         def session_for: (untyped, untyped) -> untyped
         def build_http: (untyped, untyped) -> Net::HTTP
         def close_when_idle: () -> void
