@@ -21,6 +21,7 @@ module Irasutoya
     def has_multiple_images: -> bool
 
     def initialize: (url: String, title: String, description: String, image_urls: Array[String]) -> void
+    def self.from_url: (String url) -> Irasuto
     def self.random: -> Irasuto
     def self.search: (query: String, ?page: Integer) -> Array[IrasutoLink]
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]

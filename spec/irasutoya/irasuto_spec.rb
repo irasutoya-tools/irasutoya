@@ -1,6 +1,37 @@
 # frozen_string_literal: true
 
 RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
+  describe '.from_url' do
+    it 'reopens a saved post URL with its title, description, and image' do
+      url = 'https://www.irasutoya.com/2014/03/blog-post_5924.html'
+      http = stub_page('show.html')
+      saved_url = described_class.from_url(url).url
+
+      expect(described_class.from_url(saved_url)).to have_attributes(
+        url: url,
+        title: '太った少年のイラスト（肥満）',
+        description: '標準体重よりも少し太った小学生～中学生くらいの少年（肥満児）のイラストです。',
+        image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png'
+      )
+      expect(http).to have_received(:get).with('/2014/03/blog-post_5924.html').twice
+    end
+
+    it 'rejects a search results page' do
+      stub_page('list.html')
+
+      expect { described_class.from_url('https://www.irasutoya.com/search?q=test') }
+        .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
+    end
+
+    it 'rejects off-origin URLs and relative paths before opening a connection' do
+      expect(Net::HTTP).not_to receive(:new)
+
+      %w[https://example.com/2014/03/blog-post.html /2014/03/blog-post.html].each do |url|
+        expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
+      end
+    end
+  end
+
   describe 'image accessors' do
     it 'keeps single-image results when the constructor array grows' do
       urls = ['first']
