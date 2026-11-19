@@ -11,7 +11,12 @@ module Irasutoya
     attr_reader :url, :title, :description
 
     def self.from_url(url)
-      illustration = PageLoader.load_detail(url, uri: parse_input_url(url))
+      validate_input_url(url)
+      illustration = PageLoader.load_detail(
+        url,
+        fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+        parse: method(:parse_show_page)
+      )
       return illustration if !illustration.title.empty? && illustration.image_url
 
       raise ArgumentError, 'URL does not point to an Irasutoya illustration post'
@@ -42,17 +47,30 @@ module Irasutoya
 
     class << self
       def random
-        with_fetch_timeout { PageLoader.load_detail(random_url) }
+        with_fetch_timeout do
+          PageLoader.load_detail(
+            random_url,
+            fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+            parse: method(:parse_show_page)
+          )
+        end
       end
 
       def search(query:, page: 0)
         url = "https://www.irasutoya.com/search?q=#{CGI.escape query}"
-        with_fetch_timeout { PageLoader.load_list(url, page: page) }
+        with_fetch_timeout do
+          PageLoader.load_list(
+            url,
+            page: page,
+            fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+            parse: ->(document:) { parse_list_page(document: document) }
+          )
+        end
       end
 
       private
 
-      def parse_input_url(url)
+      def validate_input_url(url)
         URI.parse(url)
       rescue URI::Error
         raise ArgumentError, 'Invalid Irasutoya page URL'

@@ -24,7 +24,7 @@ module Irasutoya
     def self.from_url: (String url) -> Irasuto
     def self.random: -> Irasuto
     def self.search: (query: String, ?page: Integer) -> Array[IrasutoLink]
-    private def self.parse_input_url: (String) -> URI::Generic
+    private def self.validate_input_url: (String) -> void
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]
     private def self.random_url: -> String
   end

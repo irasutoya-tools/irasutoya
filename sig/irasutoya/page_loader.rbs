@@ -1,11 +1,19 @@
 module Irasutoya
   module PageLoader
-    extend Modules::HasDocumentFetcher::Methods
-    extend Modules::HasListPageParser::Methods
-    extend Modules::HasShowPageParser::Methods
+    def self.load_list: (
+      String,
+      fetch: ^(String) -> untyped,
+      parse: ^(document: untyped) -> Array[{ title: String, show_url: String }],
+      ?page: Integer
+    ) -> Array[IrasutoLink]
 
-    def self.load_list: (String, ?page: Integer) -> Array[IrasutoLink]
-    def self.load_detail: (String, ?uri: URI::Generic?) -> Irasuto
-    private def self.fetch_list_page: (String, Integer) -> untyped
+    def self.load_detail: (
+      String,
+      fetch: ^(String) -> untyped,
+      parse: Method
+    ) -> Irasuto
+
+    private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String] }
+    private def self.fetch_list_page: (String, Integer, ^(String) -> untyped) -> untyped
   end
 end
