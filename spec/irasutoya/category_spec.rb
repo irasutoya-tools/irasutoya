@@ -38,6 +38,17 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe '.all with sidebar links containing queries' do
+    before { stub_page('index_category_links.html') }
+
+    it 'decodes label path segments and preserves the category query' do
+      categories = described_class.all
+
+      expect(categories.map(&:title)).to eq ['C++', 'Art / Design']
+      expect(categories.first.list_url).to eq 'https://www.irasutoya.com/search/label/C++?max-results=20'
+    end
+  end
+
   describe '#fetch_irasuto_links' do
     let(:list_url) { 'https://www.irasutoya.com/search/label/%E3%81%8A%E6%AD%A3%E6%9C%88' }
     let(:category) { Irasutoya::Category.new(title: 'お正月', list_url: list_url) }
