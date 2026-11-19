@@ -66,6 +66,18 @@ RSpec.describe 'Illustration fetch deadlines' do
     expect(@requests.pop(true)).to start_with('GET /detail ')
   end
 
+  it 'shares the deadline across search pages' do
+    first_page = '<a class="blog-pager-older-link" href="/search?q=cat&amp;start=7">Next</a>'
+    serve(
+      response('200 OK', body: first_page, delay: 0.35),
+      response('200 OK', body: '<html></html>', delay: 0.35)
+    )
+
+    expect_timeout { Irasutoya::Irasuto.search(query: 'cat', page: 1) }
+    expect(@requests.pop(true)).to start_with('GET /search?q=cat ')
+    expect(@requests.pop(true)).to start_with('GET /search?q=cat&start=7 ')
+  end
+
   it 'shares the deadline across both random feed requests and the detail request' do
     feed = JSON.generate(feed: {
                            'openSearch$totalResults' => { '$t' => '2' },

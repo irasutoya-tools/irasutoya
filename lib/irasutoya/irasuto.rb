@@ -46,13 +46,8 @@ module Irasutoya
       end
 
       def search(query:, page: 0)
-        url = if page.zero?
-                "https://www.irasutoya.com/search?q=#{CGI.escape query}"
-              else
-                "https://www.irasutoya.com/search?q=#{CGI.escape query}&max-results=20&start=#{page * 20}&by-date=false"
-              end
-
-        PageLoader.load_list(url)
+        url = "https://www.irasutoya.com/search?q=#{CGI.escape query}"
+        with_fetch_timeout { PageLoader.load_list(url, page: page) }
       end
 
       private
@@ -66,7 +61,8 @@ module Irasutoya
       def fetch_feed(index)
         url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
         body, = ResponseFetcher.get(url, max_bytes: MAX_FEED_BYTES, follow_redirects: false)
-        JSON.parse(body[/{.+}/]).fetch('feed')
+        payload = body[/{.+}/] or raise TypeError, 'no implicit conversion of nil into String'
+        JSON.parse(payload).fetch('feed')
       end
 
       def random_url
