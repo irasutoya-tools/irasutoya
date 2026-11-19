@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'irasutoya/http_transport'
 require 'irasutoya/modules'
 require 'irasutoya/response_fetcher'
 require 'irasutoya/page_loader'

@@ -49,7 +49,7 @@ RSpec.describe Irasutoya::ResponseFetcher do
       worker = Thread.new do
         socket = server.accept
         socket.gets("\r\n\r\n")
-        socket.write("HTTP/1.1 #{status}\r\n#{headers}\r\n\r\n", body)
+        socket.write("HTTP/1.1 #{status}\r\nConnection: close\r\n#{headers}\r\n\r\n", body)
         socket.read
       ensure
         socket&.close

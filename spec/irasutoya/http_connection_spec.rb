@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'openssl'
 require 'socket'
 require 'timeout'
 
@@ -7,14 +8,15 @@ RSpec.describe 'Illustration HTTP connections' do
   let(:listener) { TCPServer.new('127.0.0.1', 0) }
   let(:origin) { "http://127.0.0.1:#{listener.addr[1]}" }
   let(:trusted_origin) { 'https://www.irasutoya.com' }
+  let(:acceptor) { listener }
   let(:requests) { Queue.new }
   let(:disconnections) { Queue.new }
 
   around do |example|
-    origin
+    server_socket = acceptor
     server = Thread.new do
       loop do
-        listener.accept.tap do |socket|
+        server_socket.accept.tap do |socket|
           serve(socket)
           disconnections << socket
         ensure
@@ -38,6 +40,55 @@ RSpec.describe 'Illustration HTTP connections' do
     end
     allow(ENV).to receive(:[]).and_call_original
     %w[https_proxy HTTPS_PROXY].each { |name| allow(ENV).to receive(:[]).with(name).and_return(nil) }
+  end
+
+  context 'with a local HTTPS server' do
+    let(:certificate) { OpenSSL::X509::Certificate.new }
+    let(:acceptor) do
+      key = OpenSSL::PKey::RSA.new(2048)
+      certificate.version = 2
+      certificate.serial = 1
+      certificate.subject = certificate.issuer = OpenSSL::X509::Name.parse('/CN=localhost')
+      certificate.public_key = key
+      certificate.not_before = Time.now - 60
+      certificate.not_after = Time.now + 3600
+      extensions = OpenSSL::X509::ExtensionFactory.new
+      extensions.subject_certificate = extensions.issuer_certificate = certificate
+      certificate.add_extension(extensions.create_extension('subjectAltName', 'IP:127.0.0.1'))
+      certificate.sign(key, OpenSSL::Digest.new('SHA256'))
+
+      context = OpenSSL::SSL::SSLContext.new
+      context.cert = certificate
+      context.key = key
+      OpenSSL::SSL::SSLServer.new(listener, context)
+    end
+
+    before do
+      allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, nil, nil, nil, nil)
+                                      .and_wrap_original do |new_http, *|
+        http = new_http.call('127.0.0.1', listener.addr[1], nil)
+        http.cert_store = OpenSSL::X509::Store.new.tap { |store| store.add_cert(certificate) }
+        http
+      end
+    end
+
+    it 'fetches the count, selected entry, and larger detail page over one TLS connection' do
+      count_path = '/feeds/posts/summary?start-index=1&max-results=1&alt=json-in-script'
+      entry_path = count_path.sub('start-index=1', 'start-index=2')
+      entry = JSON.generate(feed: {
+                              entry: [{ link: [{ rel: 'alternate', href: "#{trusted_origin}/detail" }] }]
+                            })
+      stub_const('Irasutoya::Irasuto::MAX_FEED_BYTES', entry.bytesize)
+      allow(Random).to receive(:rand).with(2).and_return(1)
+      expect(self).to receive(:response_for).with(count_path).ordered
+                                           .and_return(http_response('200 OK', '{"feed":{"openSearch$totalResults":{"$t":"2"}}}'))
+      expect(self).to receive(:response_for).with(entry_path).ordered.and_return(http_response('200 OK', entry))
+      html = File.read('spec/files/show.html')
+      expect(self).to receive(:response_for).with('/detail').ordered.and_return(http_response('200 OK', html))
+
+      expect(Irasutoya::Irasuto.random.title).to eq('太った少年のイラスト（肥満）')
+      expect(Array.new(3) { requests.pop }.uniq.size).to eq(1)
+    end
   end
 
   it 'parses twenty distinct detail pages over a single TCP connection' do
@@ -72,8 +123,7 @@ RSpec.describe 'Illustration HTTP connections' do
   end
 
   it 'closes idle connections without waiting for another request' do
-    fetcher = Irasutoya::Modules::HasDocumentFetcher
-    session_class = fetcher.const_get(:HttpSession)
+    session_class = Irasutoya.const_get(:HttpSession)
     stub_const("#{session_class}::IDLE_TIMEOUT", 0.1)
 
     fetch_detail('/first')
@@ -121,10 +171,10 @@ RSpec.describe 'Illustration HTTP connections' do
       original.call(path)
     end
 
-    pool = Irasutoya::Modules::HasDocumentFetcher.const_get(:HttpSessionPool).new
-    slow_fetch = Thread.new { pool.get(URI.parse("#{origin}/slow")) }
+    pool = Irasutoya.const_get(:HttpSessionPool).new
+    slow_fetch = Thread.new { pool.request(URI.parse("#{origin}/slow")) { |_, response| response.read_body } }
     requests.pop
-    expect(pool.get(URI.parse("#{other_origin}/fast")).body).to include('/fast')
+    expect(pool.request(URI.parse("#{other_origin}/fast")) { |_, response| response.read_body }.body).to include('/fast')
     release_response << true
     expect(slow_fetch.value.body).to include('/slow')
   ensure

@@ -1,0 +1,49 @@
+module Irasutoya
+  class FetchDeadlineExceeded < StandardError
+  end
+
+  class HttpSessionPool
+    type origin = [Integer, String, String, Integer, String?]
+
+    @lock: Mutex
+    @sessions: Hash[origin, HttpSession]
+    @users: Hash[origin, Integer]
+
+    def request: (URI::HTTP) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
+    def read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
+    def initialize: () -> void
+    def close_inherited_connections: () -> void
+
+    private
+
+    def abort_download: (Net::HTTP, Integer) -> bot
+    def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
+    def acquire_session: (origin) -> HttpSession
+    def remove_idle_session: (origin) -> bool
+  end
+
+  class HttpSession
+    IDLE_TIMEOUT: Float
+    @lock: Mutex
+    @on_idle: ^() -> bool
+    @http: untyped
+    @idle_since: Float
+
+    def request: (URI::HTTP, URI::Generic?) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
+    def initialize: () { () -> bool } -> void
+    def close_inherited_connection: () -> void
+
+    private
+
+    def session_for: (untyped, untyped) -> untyped
+    def close_when_idle: () -> void
+    def remaining_idle_time: () -> Float
+    def monotonic_time: () -> Float
+  end
+
+  HTTP_TRANSPORT: HttpSessionPool
+
+  module ForkCleanup
+    def _fork: () -> Integer
+  end
+end

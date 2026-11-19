@@ -21,34 +21,18 @@ module Irasutoya
     end
 
     def self.read_body(http, response, max_bytes)
-      body = ''.b
-      response.read_body do |chunk|
-        abort_download(http, max_bytes) if body.bytesize + chunk.bytesize > max_bytes
-
-        body << chunk
-      end
-      body
-    rescue IOError => e
-      # Net::HTTP can try to read the chunk terminator while unwinding.
-      cause = e.cause
-      raise cause if cause.is_a?(ResponseTooLargeError)
-
-      raise
+      HTTP_TRANSPORT.read_body(http, response, max_bytes)
     end
 
     def self.request(uri, max_bytes, follow_redirects)
-      host = uri.hostname || raise(ArgumentError, 'Expected an HTTP or HTTPS host')
+      body = ''.b
+      response = HTTP_TRANSPORT.request(uri) do |http, reply|
+        return reply.fetch('location') if follow_redirects && REDIRECT_CODES.include?(reply.code)
 
-      Net::HTTP.start(host, uri.port, use_ssl: uri.scheme == 'https') do |http|
-        body = ''.b
-        response = http.request_get(uri.request_uri) do |response|
-          return response.fetch('location') if follow_redirects && REDIRECT_CODES.include?(response.code)
-
-          response.value
-          body = read_body(http, response, max_bytes)
-        end
-        [body, response['content-type']]
+        reply.value
+        body = read_body(http, reply, max_bytes)
       end
+      [body, response['content-type']]
     end
     private_class_method :request
 
@@ -59,11 +43,5 @@ module Irasutoya
       raise IOError, "HTTP redirect to unsupported scheme: #{target.scheme}"
     end
     private_class_method :redirect_uri
-
-    def self.abort_download(http, max_bytes)
-      http.finish
-      raise ResponseTooLargeError, "HTTP response exceeds the #{max_bytes}-byte limit"
-    end
-    private_class_method :abort_download
   end
 end
