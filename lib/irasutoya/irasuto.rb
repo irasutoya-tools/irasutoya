@@ -55,7 +55,8 @@ module Irasutoya
       def fetch_feed(index)
         url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
         body, = ResponseFetcher.get(url, max_bytes: MAX_FEED_BYTES, follow_redirects: false)
-        JSON.parse(body[/{.+}/]).fetch('feed')
+        payload = body[/{.+}/] or raise TypeError, 'no implicit conversion of nil into String'
+        JSON.parse(payload).fetch('feed')
       end
 
       def random_url

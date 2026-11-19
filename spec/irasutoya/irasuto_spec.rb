@@ -111,6 +111,12 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
     end
 
+    it 'raises a type error when the feed has no JSON payload' do
+      allow(feed_response).to receive(:read_body).and_yield('callback();')
+
+      expect { described_class.random }.to raise_error(TypeError, 'no implicit conversion of nil into String')
+    end
+
     it 'rejects an oversized count feed before choosing a random index' do
       stub_const('Irasutoya::Irasuto::MAX_FEED_BYTES', feed_body.bytesize - 1)
       expect(Random).not_to receive(:rand)
