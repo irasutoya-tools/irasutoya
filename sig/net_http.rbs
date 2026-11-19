@@ -1,0 +1,5 @@
+module Net
+  class HTTP
+    attr_accessor ignore_eof: bool
+  end
+end
