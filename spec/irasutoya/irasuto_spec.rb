@@ -23,6 +23,13 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
     end
 
+    it 'rejects a titled post with only missing or blank image sources' do
+      stub_page('show_without_image_sources.html')
+
+      expect { described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html') }
+        .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
+    end
+
     it 'rejects off-origin URLs and relative paths before opening a connection' do
       expect(Net::HTTP).not_to receive(:new)
 
@@ -72,7 +79,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(feed_http).to receive(:finish)
-      allow(Net::HTTP).to receive(:start).with('www.irasutoya.com', 443, use_ssl: true).and_yield(feed_http)
+      allow(Net::HTTP).to receive(:start)
+                         .with('www.irasutoya.com', 443, use_ssl: true, ignore_eof: false).and_yield(feed_http)
       allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(feed_response).and_return(feed_response)
       page_http
     end
@@ -109,6 +117,12 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(response).not_to receive(:read_body)
 
       expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
+    end
+
+    it 'raises a type error when the feed has no JSON payload' do
+      allow(feed_response).to receive(:read_body).and_yield('callback();')
+
+      expect { described_class.random }.to raise_error(TypeError, 'no implicit conversion of nil into String')
     end
 
     it 'rejects an oversized count feed before choosing a random index' do
@@ -162,7 +176,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     end
 
     it 'should return random irasuto with image_url' do
-      expect(Irasutoya::Irasuto.random.image_url).to eq('http://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
+      expect(Irasutoya::Irasuto.random.image_url).to eq('https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
     end
 
     it 'should not have postthumb_image_url when image size is 1' do
