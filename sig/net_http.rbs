@@ -1,5 +1,5 @@
 module Net
   class HTTP
-    def ignore_eof=: (bool) -> bool
+    attr_accessor ignore_eof: bool
   end
 end

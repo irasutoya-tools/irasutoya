@@ -11,7 +11,7 @@ module Irasutoya
       def self.included: (Class) -> void
 
       module Methods
-        def fetch_page_and_parse: (String) -> untyped
+        def fetch_page_and_parse: (String, ?uri: URI::Generic?) -> untyped
 
         private
 
