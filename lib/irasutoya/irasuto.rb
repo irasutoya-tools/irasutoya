@@ -60,7 +60,7 @@ module Irasutoya
       def fetch_feed(index)
         url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
         body, = ResponseFetcher.get(url, max_bytes: MAX_FEED_BYTES, follow_redirects: false)
-        JSON.parse(body[/{.+}/]).fetch('feed')
+        JSON.parse(body[/{.+}/m]).fetch('feed')
       end
 
       def random_url

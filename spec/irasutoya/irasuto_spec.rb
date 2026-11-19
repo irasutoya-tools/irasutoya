@@ -94,6 +94,27 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       expect(described_class.random.url).to eq(show_url)
     end
 
+    context 'with a multiline JSONP feed' do
+      let(:feed_count) { 1 }
+      let(:feed_body) do
+        <<~JSONP
+          gdata.io.handleScriptLoaded({
+            "feed": {
+              "openSearch$totalResults": { "$t": "1" },
+              "entry": [{ "link": [{ "rel": "alternate", "href": "#{show_url}" }] }]
+            }
+          });
+        JSONP
+      end
+
+      it 'returns an illustration from the feed' do
+        expect(described_class.random).to have_attributes(
+          url: show_url,
+          title: '太った少年のイラスト（肥満）'
+        )
+      end
+    end
+
     it 'raises an HTTP error before parsing a failed count response' do
       response = Net::HTTPBadRequest.new('1.1', '400', 'Bad Request')
       allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(response)
