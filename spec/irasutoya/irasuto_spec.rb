@@ -13,7 +13,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         description: '標準体重よりも少し太った小学生～中学生くらいの少年（肥満児）のイラストです。',
         image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png'
       )
-      expect(http).to have_received(:get).with('/2014/03/blog-post_5924.html').twice
+      expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
 
     it 'rejects a search results page' do
@@ -29,6 +29,21 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       %w[https://example.com/2014/03/blog-post.html /2014/03/blog-post.html].each do |url|
         expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
       end
+    end
+
+    it 'rejects malformed URLs before opening a connection' do
+      expect(Net::HTTP).not_to receive(:new)
+
+      ['/search?q=猫', 'https://www.irasutoya.com:bad/post.html'].each do |url|
+        expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Invalid Irasutoya page URL')
+      end
+    end
+
+    it 'preserves URI errors raised while fetching a valid URL' do
+      http = stub_page_http
+      allow(http).to receive(:request_get).and_raise(URI::InvalidURIError)
+
+      expect { described_class.from_url('https://www.irasutoya.com/post.html') }.to raise_error(URI::InvalidURIError)
     end
   end
 

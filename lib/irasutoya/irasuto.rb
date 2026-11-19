@@ -11,7 +11,7 @@ module Irasutoya
     attr_reader :url, :title, :description
 
     def self.from_url(url)
-      illustration = PageLoader.load_detail(url)
+      illustration = PageLoader.load_detail(url, uri: parse_input_url(url))
       return illustration if !illustration.title.empty? && illustration.image_url
 
       raise ArgumentError, 'URL does not point to an Irasutoya illustration post'
@@ -56,6 +56,12 @@ module Irasutoya
       end
 
       private
+
+      def parse_input_url(url)
+        URI.parse(url)
+      rescue URI::Error
+        raise ArgumentError, 'Invalid Irasutoya page URL'
+      end
 
       def fetch_feed(index)
         url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"

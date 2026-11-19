@@ -5,6 +5,6 @@ module Irasutoya
     extend Modules::HasShowPageParser::Methods
 
     def self.load_list: (String) -> Array[IrasutoLink]
-    def self.load_detail: (String) -> Irasuto
+    def self.load_detail: (String, ?uri: URI::Generic?) -> Irasuto
   end
 end
