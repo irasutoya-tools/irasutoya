@@ -13,7 +13,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         description: '標準体重よりも少し太った小学生～中学生くらいの少年（肥満児）のイラストです。',
         image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png'
       )
-      expect(http).to have_received(:get).with('/2014/03/blog-post_5924.html').twice
+      expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
 
     it 'rejects a search results page' do
@@ -109,6 +109,12 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       expect(response).not_to receive(:read_body)
 
       expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
+    end
+
+    it 'raises a type error when the feed has no JSON payload' do
+      allow(feed_response).to receive(:read_body).and_yield('callback();')
+
+      expect { described_class.random }.to raise_error(TypeError, 'no implicit conversion of nil into String')
     end
 
     it 'rejects an oversized count feed before choosing a random index' do
