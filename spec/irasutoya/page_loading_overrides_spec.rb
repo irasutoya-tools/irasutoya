@@ -79,6 +79,13 @@ RSpec.describe 'Page loading overrides' do
     let(:receiver) { Class.new(Irasutoya::Irasuto) }
     let(:detail_url) { 'https://www.irasutoya.com/2014/03/blog-post_5924.html' }
 
+    it 'rejects malformed input before calling a fetch override' do
+      expect(receiver).not_to receive(:fetch_page_and_parse)
+
+      expect { receiver.from_url('https://www.irasutoya.com:bad/post.html') }
+        .to raise_error(ArgumentError, 'Invalid Irasutoya page URL')
+    end
+
     it 'passes the page URL to URL-aware parser overrides' do
       allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(document)
       expected_document = document

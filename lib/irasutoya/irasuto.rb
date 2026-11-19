@@ -11,6 +11,7 @@ module Irasutoya
     attr_reader :url, :title, :description
 
     def self.from_url(url)
+      validate_input_url(url)
       illustration = PageLoader.load_detail(
         url,
         fetch: ->(page_url) { fetch_page_and_parse(page_url) },
@@ -68,6 +69,12 @@ module Irasutoya
       end
 
       private
+
+      def validate_input_url(url)
+        URI.parse(url)
+      rescue URI::Error
+        raise ArgumentError, 'Invalid Irasutoya page URL'
+      end
 
       def fetch_feed(index)
         url = "https://www.irasutoya.com/feeds/posts/summary?start-index=#{index}&max-results=1&alt=json-in-script"
