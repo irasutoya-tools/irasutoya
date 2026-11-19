@@ -72,7 +72,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(feed_http).to receive(:finish)
-      allow(Net::HTTP).to receive(:start).with('www.irasutoya.com', 443, use_ssl: true).and_yield(feed_http)
+      allow(Net::HTTP).to receive(:start)
+                         .with('www.irasutoya.com', 443, use_ssl: true, ignore_eof: false).and_yield(feed_http)
       allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(feed_response).and_return(feed_response)
       page_http
     end

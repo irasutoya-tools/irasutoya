@@ -48,6 +48,14 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(received.uniq.size).to eq(1)
   end
 
+  it 'rejects a truncated page before parsing and accepts a complete page on the next fetch' do
+    allow(Nokogiri::HTML).to receive(:parse).and_call_original
+
+    expect { fetch_detail('/truncated') }.to raise_error(EOFError)
+    expect(Nokogiri::HTML).not_to have_received(:parse)
+    expect(fetch_detail('/complete').title).to eq('/complete')
+  end
+
   it 'reconnects when the server closes an idle connection' do
     fetch_detail('/first')
     original_socket = requests.pop
@@ -172,6 +180,7 @@ RSpec.describe 'Illustration HTTP connections' do
       nil until ["\r\n", nil].include?(socket.gets)
       requests << socket
       socket.write(response_for(path))
+      break if path == '/truncated'
     end
   end
 
@@ -188,6 +197,7 @@ RSpec.describe 'Illustration HTTP connections' do
     end
 
     return http_response('404 Not Found', 'Missing illustration') if path == '/missing'
+    return "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n<p>Partial</p>" if path == '/truncated'
 
     title, charset = path == '/encoded' ? ['珈琲', 'Shift_JIS'] : [path, 'UTF-8']
     body = %(<div class="post"><div class="title"><h2>#{title}</h2></div></div>).encode(charset)

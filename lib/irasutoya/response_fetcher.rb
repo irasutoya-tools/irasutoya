@@ -39,7 +39,7 @@ module Irasutoya
     def self.request(uri, max_bytes, follow_redirects)
       host = uri.hostname || raise(ArgumentError, 'Expected an HTTP or HTTPS host')
 
-      Net::HTTP.start(host, uri.port, use_ssl: uri.scheme == 'https') do |http|
+      Net::HTTP.start(host, uri.port, use_ssl: uri.scheme == 'https', ignore_eof: false) do |http|
         body = ''.b
         response = http.request_get(uri.request_uri) do |response|
           return response.fetch('location') if follow_redirects && REDIRECT_CODES.include?(response.code)
