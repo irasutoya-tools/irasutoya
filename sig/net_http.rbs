@@ -1,0 +1,5 @@
+module Net
+  class HTTP
+    def ignore_eof=: (bool) -> bool
+  end
+end

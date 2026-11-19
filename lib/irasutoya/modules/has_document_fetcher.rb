@@ -21,7 +21,9 @@ module Irasutoya
       module Methods
         def fetch_page_and_parse(url)
           with_fetch_timeout do
-            HTTP_DOCUMENT.open(URI.parse(url)) { |page| Nokogiri::HTML.parse(page, nil, page.charset) }
+            HTTP_DOCUMENT.open(URI.parse(url)) do |page|
+              Nokogiri::HTML.parse(page, page.base_uri.to_s, page.charset)
+            end
           end
         end
 
@@ -183,11 +185,17 @@ module Irasutoya
           return @http if @http&.started?
           raise "Non-HTTP proxy URI: #{proxy}" if proxy && proxy.scheme != 'http'
 
-          proxy_user, proxy_password = proxy&.userinfo&.split(':')
-          @http = Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password)
-          @http.use_ssl = uri.scheme == 'https'
-          @http.keep_alive_timeout = IDLE_TIMEOUT
+          @http = build_http(uri, proxy)
           @http.start
+        end
+
+        def build_http(uri, proxy)
+          proxy_user, proxy_password = proxy&.userinfo&.split(':')
+          Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password).tap do |http|
+            http.use_ssl = uri.scheme == 'https'
+            http.ignore_eof = false
+            http.keep_alive_timeout = IDLE_TIMEOUT
+          end
         end
 
         def close_when_idle

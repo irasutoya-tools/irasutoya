@@ -2,8 +2,11 @@
 
 module Irasutoya
   module PageLoader
-    def self.load_list(url, fetch:, parse:)
-      parse.call(document: fetch.call(url)).map do |parsed|
+    def self.load_list(url, fetch:, parse:, page: 0)
+      document = fetch_list_page(url, page, fetch)
+      return [] unless document
+
+      parse.call(document: document).map do |parsed|
         IrasutoLink.new(title: parsed.fetch(:title), show_url: parsed.fetch(:show_url))
       end
     end
@@ -19,9 +22,26 @@ module Irasutoya
       accepts_url = parser.parameters.any? do |kind, name|
         kind == :keyrest || (%i[key keyreq].include?(kind) && name == :url)
       end
-      accepts_url ? parser.call(document: document, url: url) : parser.call(document: document)
+      return parser.call(document: document) unless accepts_url
+
+      page_url = document.url if document.respond_to?(:url)
+      parser.call(document: document, url: page_url || url)
     end
     private_class_method :parse_detail
+
+    def self.fetch_list_page(url, page, fetch)
+      document = fetch.call(url)
+      page.times do
+        next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
+        return nil if next_href.nil? || next_href.empty?
+
+        url = URI.join(url, next_href).to_s
+        document = fetch.call(url)
+      end
+
+      document
+    end
+    private_class_method :fetch_list_page
   end
 
   private_constant :PageLoader

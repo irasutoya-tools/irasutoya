@@ -39,6 +39,17 @@ RSpec.describe 'Page loading overrides' do
     let(:links) { receiver.search(query: 'cat') }
 
     include_examples 'list loading with receiver overrides'
+
+    it 'uses the receiver fetch override for every search page and parses the requested page' do
+      next_url = 'https://www.irasutoya.com/search?q=cat&start=7'
+      first_page = Nokogiri::HTML.parse('<a class="blog-pager-older-link" href="?q=cat&start=7">Next</a>')
+      allow(receiver).to receive(:fetch_page_and_parse).with(list_url).and_return(first_page)
+      allow(receiver).to receive(:fetch_page_and_parse).with(next_url).and_return(document)
+      expect(receiver).to receive(:parse_list_page).with(document: document)
+                                                   .and_return([{ title: 'Custom link', show_url: detail_url }])
+
+      expect(receiver.search(query: 'cat', page: 1).map(&:show_url)).to eq([detail_url])
+    end
   end
 
   describe 'category browsing' do
@@ -78,6 +89,17 @@ RSpec.describe 'Page loading overrides' do
       end
 
       expect(receiver.from_url(detail_url).image_url).to eq('https://www.irasutoya.com/2014/03/image.png')
+    end
+
+    it 'resolves relative images against the fetched document URL while retaining the requested URL' do
+      final_url = 'https://www.irasutoya.com/2026/11/post.html'
+      html = '<div class="post"><div class="title"><h2>Cat</h2></div><div class="entry"><img src="cat.png"></div></div>'
+      redirected_document = Nokogiri::HTML.parse(html, final_url)
+      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(redirected_document)
+
+      expect(receiver.from_url(detail_url)).to have_attributes(
+        url: detail_url, image_url: 'https://www.irasutoya.com/2026/11/cat.png'
+      )
     end
   end
 
