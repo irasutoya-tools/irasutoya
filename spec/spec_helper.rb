@@ -15,7 +15,8 @@ module PageFixtures
     response = Net::HTTPOK.new('1.1', '200', 'OK')
     response['Content-Type'] = 'text/html; charset=UTF-8'
     allow(response).to receive(:body).and_return(File.read("spec/files/#{filename}"))
-    stub_page_http.tap { |http| allow(http).to receive(:get).and_return(response) }
+    allow(response).to receive(:read_body).and_yield(response.body)
+    stub_page_http.tap { |http| allow(http).to receive(:request_get).and_yield(response).and_return(response) }
   end
 
   def stub_page_http

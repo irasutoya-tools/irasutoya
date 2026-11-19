@@ -52,7 +52,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     it 'loads detail and thumbnail URLs from the category listing' do
       link = results.first
 
-      expect(page_http).to have_received(:get).with(URI.parse(list_url).request_uri).once
+      expect(page_http).to have_received(:request_get).with(URI.parse(list_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
       expect(link.thumbnail_url).to eq(
