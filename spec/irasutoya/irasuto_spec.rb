@@ -13,7 +13,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         description: '標準体重よりも少し太った小学生～中学生くらいの少年（肥満児）のイラストです。',
         image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png'
       )
-      expect(http).to have_received(:get).with('/2014/03/blog-post_5924.html').twice
+      expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
 
     it 'rejects a search results page' do
@@ -72,7 +72,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(feed_http).to receive(:finish)
-      allow(Net::HTTP).to receive(:start).with('www.irasutoya.com', 443, use_ssl: true).and_yield(feed_http)
+      allow(Net::HTTP).to receive(:start)
+                         .with('www.irasutoya.com', 443, use_ssl: true, ignore_eof: false).and_yield(feed_http)
       allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(feed_response).and_return(feed_response)
       page_http
     end

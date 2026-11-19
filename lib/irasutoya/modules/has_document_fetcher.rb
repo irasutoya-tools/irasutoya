@@ -183,11 +183,17 @@ module Irasutoya
           return @http if @http&.started?
           raise "Non-HTTP proxy URI: #{proxy}" if proxy && proxy.scheme != 'http'
 
-          proxy_user, proxy_password = proxy&.userinfo&.split(':')
-          @http = Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password)
-          @http.use_ssl = uri.scheme == 'https'
-          @http.keep_alive_timeout = IDLE_TIMEOUT
+          @http = build_http(uri, proxy)
           @http.start
+        end
+
+        def build_http(uri, proxy)
+          proxy_user, proxy_password = proxy&.userinfo&.split(':')
+          Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password).tap do |http|
+            http.use_ssl = uri.scheme == 'https'
+            http.ignore_eof = false
+            http.keep_alive_timeout = IDLE_TIMEOUT
+          end
         end
 
         def close_when_idle
