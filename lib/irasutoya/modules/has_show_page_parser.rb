@@ -10,11 +10,11 @@ module Irasutoya
       end
 
       module Methods
-        def parse_show_page(document:)
+        def parse_show_page(document:, url:)
           {
             title: PrivateMethods.title_from(document: document),
             description: PrivateMethods.description_from(document: document),
-            image_urls: PrivateMethods.image_urls_from(document: document)
+            image_urls: PrivateMethods.image_urls_from(document: document, url: url)
           }
         end
       end
@@ -26,21 +26,14 @@ module Irasutoya
           end
 
           def description_from(document:)
-            separators = document.css('.entry .separator')
-            target = separators.length > 1 ? separators[1] : separators[0]
-            target&.text&.strip || ''
+            document.css('.entry .separator').last&.text&.strip || ''
           end
 
-          def image_url_from(document:)
-            image = document.css('.entry').search('img').attribute('src').value
-            image.chars.first == '/' ? "https:#{image}" : image
-          end
-
-          def image_urls_from(document:)
-            sources = document.css('.entry').search('img').collect do |img|
-              img[:src]
+          def image_urls_from(document:, url:)
+            document.css('.entry').search('img').map do |img|
+              source = img[:src]
+              source.match?(/\A[a-z][a-z0-9+.-]*:/i) ? source : URI.join(url, source).to_s
             end
-            sources.collect { |url| url.start_with?('/') ? "https:#{url}" : url }
           end
         end
       end

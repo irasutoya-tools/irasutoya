@@ -19,18 +19,18 @@ RSpec.describe Irasutoya::Irasuto do
 
   it 'returns all seven results on the default page without fetching the next page' do
     expect(described_class.search(query: query).map(&:show_url)).to eq(first_results)
-    expect(page_http).to have_received(:get).with(search_uri.request_uri).once
-    expect(page_http).not_to have_received(:get).with(next_uri.request_uri)
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
   it 'follows the advertised cursor to the second page' do
     expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(next_results)
-    expect(page_http).to have_received(:get).with(next_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
   it 'returns an empty array beyond the last page' do
     expect(described_class.search(query: query, page: 2)).to eq([])
-    expect(page_http).to have_received(:get).with(next_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
   def stub_search_page(uri, paths, pager = '')
@@ -41,6 +41,7 @@ RSpec.describe Irasutoya::Irasuto do
     response = Net::HTTPOK.new('1.1', '200', 'OK')
     response['Content-Type'] = 'text/html; charset=UTF-8'
     allow(response).to receive(:body).and_return(html)
-    allow(page_http).to receive(:get).with(uri.request_uri).and_return(response)
+    allow(response).to receive(:read_body).and_yield(html)
+    allow(page_http).to receive(:request_get).with(uri.request_uri).and_yield(response).and_return(response)
   end
 end

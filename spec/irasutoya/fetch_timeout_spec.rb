@@ -4,7 +4,6 @@ require 'socket'
 
 RSpec.describe 'Illustration fetch deadlines' do
   let(:server) { TCPServer.new('127.0.0.1', 0) }
-  let(:base_url) { "http://127.0.0.1:#{server.addr[1]}" }
   let(:trusted_url) { 'https://www.irasutoya.com' }
 
   before do
@@ -42,6 +41,20 @@ RSpec.describe 'Illustration fetch deadlines' do
     expect(@requests.pop(true)).to start_with('GET /next ')
   end
 
+  it 'closes an oversized page and reconnects for the next fetch' do
+    html = File.read('spec/files/show.html')
+    stub_const('Irasutoya::Modules::HasDocumentFetcher::MAX_HTML_BYTES', html.bytesize)
+    stream = lambda do |socket|
+      socket.write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", "#{(html.bytesize + 1).to_s(16)}\r\n", html, '!')
+      socket.read
+    end
+    serve(stream, response('200 OK', body: html, delay: 0))
+
+    expect { fetch_illustration('/oversized') }.to raise_error(Irasutoya::ResponseTooLargeError)
+    expect(fetch_illustration('/next').title).to eq('太った少年のイラスト（肥満）')
+    expect(@worker.join(1)).to be(@worker)
+  end
+
   it 'shares the deadline across redirects' do
     serve(
       response('302 Found', location: '/detail', delay: 0.35),
@@ -76,13 +89,10 @@ RSpec.describe 'Illustration fetch deadlines' do
       response('200 OK', body: File.read('spec/files/show.html'), delay: 0.35)
     )
     allow(Random).to receive(:rand).with(2).and_return(1)
-    allow(Net::HTTP).to receive(:get_response).and_wrap_original do |get_response, uri|
-      get_response.call(URI.parse("#{base_url}/feed?#{uri.query}"))
-    end
 
     expect_timeout { Irasutoya::Irasuto.random }
-    expect(@requests.pop(true)).to start_with('GET /feed?start-index=1&')
-    expect(@requests.pop(true)).to start_with('GET /feed?start-index=2&')
+    expect(@requests.pop(true)).to start_with('GET /feeds/posts/summary?start-index=1&')
+    expect(@requests.pop(true)).to start_with('GET /feeds/posts/summary?start-index=2&')
     expect(@requests.pop(true)).to start_with('GET /detail ')
   end
 
