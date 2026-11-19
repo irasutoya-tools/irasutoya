@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
+RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
   describe '.from_url' do
     it 'reopens a saved post URL with its title, description, and image' do
       url = 'https://www.irasutoya.com/2014/03/blog-post_5924.html'
@@ -13,7 +13,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
         description: '標準体重よりも少し太った小学生～中学生くらいの少年（肥満児）のイラストです。',
         image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png'
       )
-      expect(http).to have_received(:get).with('/2014/03/blog-post_5924.html').twice
+      expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
 
     it 'rejects a search results page' do
@@ -204,7 +204,6 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
     let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
-    let(:paginated_url) { "#{search_url}&max-results=20&start=40&by-date=false" }
     let(:results) { described_class.search(query: query) }
 
     let(:page_http) { stub_page('list.html') }
@@ -226,10 +225,10 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       results
     end
 
-    it 'loads links from the paginated search URL with their detail URLs' do
-      link = Irasutoya::Irasuto.search(query: query, page: 2).first
+    it 'loads links from the initial search URL with their detail URLs' do
+      link = results.first
 
-      expect(page_http).to have_received(:request_get).with(URI.parse(paginated_url).request_uri).once
+      expect(page_http).to have_received(:request_get).with(URI.parse(search_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end

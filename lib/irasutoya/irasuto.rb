@@ -46,13 +46,8 @@ module Irasutoya
       end
 
       def search(query:, page: 0)
-        url = if page.zero?
-                "https://www.irasutoya.com/search?q=#{CGI.escape query}"
-              else
-                "https://www.irasutoya.com/search?q=#{CGI.escape query}&max-results=20&start=#{page * 20}&by-date=false"
-              end
-
-        PageLoader.load_list(url)
+        url = "https://www.irasutoya.com/search?q=#{CGI.escape query}"
+        with_fetch_timeout { PageLoader.load_list(url, page: page) }
       end
 
       private
