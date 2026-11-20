@@ -2,40 +2,66 @@
 
 module Irasutoya
   module PageLoader
-    extend Modules::HasDocumentFetcher::Methods
-    extend Modules::HasListPageParser::Methods
-    extend Modules::HasShowPageParser::Methods
+    def self.load_list(url, fetch:, parse:, page: 0)
+      listing = fetch_list_page(url, page, fetch)
+      return [] unless listing
 
-    def self.load_list(url, page: 0)
-      document = fetch_list_page(url, page)
-      return [] unless document
-
-      parse_list_page(document: document).map do |parsed|
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: parsed.fetch(:show_url),
-                        thumbnail_url: parsed.fetch(:thumbnail_url))
+      document, page_url = listing
+      parse.call(document: document).map do |parsed|
+        href = parsed.fetch(:show_url)
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
+                        thumbnail_url: parsed[:thumbnail_url])
       end
     end
 
-    def self.load_detail(url)
-      document = fetch_page_and_parse(url)
-      parsed = parse_show_page(document: document, url: document.url)
-      Irasuto.new(url: url, title: parsed.fetch(:title), description: parsed.fetch(:description),
-                  image_urls: parsed.fetch(:image_urls))
+    def self.load_detail(url, fetch:, parse:)
+      document = fetch.call(url)
+      parsed = parse_detail(parse, document, url)
+      title = parsed.fetch(:title)
+      image_urls = parsed.fetch(:image_urls)
+      raise ArgumentError, 'URL does not point to an Irasutoya illustration post' if title.empty? || !image_urls.first
+
+      Irasuto.new(url: url, title: title, description: parsed.fetch(:description), image_urls: image_urls)
     end
 
-    def self.fetch_list_page(url, page)
-      document = fetch_page_and_parse(url)
+    def self.parse_detail(parser, document, url)
+      accepts_url = parser.parameters.any? do |kind, name|
+        kind == :keyrest || (%i[key keyreq].include?(kind) && name == :url)
+      end
+      return parser.call(document: document) unless accepts_url
+
+      parser.call(document: document, url: effective_url(document, url))
+    end
+    private_class_method :parse_detail
+
+    def self.fetch_list_page(url, page, fetch)
+      document = fetch.call(url)
       page.times do
         next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
         return nil if next_href.nil? || next_href.empty?
 
-        url = URI.join(url, next_href).to_s
-        document = fetch_page_and_parse(url)
+        url = URI.join(effective_url(document, url), next_href).to_s
+        document = fetch.call(url)
       end
 
-      document
+      [document, effective_url(document, url)] if document
     end
     private_class_method :fetch_list_page
+
+    def self.effective_url(document, requested_url)
+      page_url = document.url if document.respond_to?(:url)
+      page_url || requested_url
+    end
+    private_class_method :effective_url
+
+    def self.resolve_detail_href(page_url, href)
+      return href if href.empty? || href.match?(/\A[a-z][a-z0-9+.-]*:/i)
+
+      URI.join(page_url, href).to_s
+    rescue URI::Error
+      href
+    end
+    private_class_method :resolve_detail_href
   end
 
   private_constant :PageLoader

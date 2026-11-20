@@ -9,7 +9,7 @@ RSpec.describe Irasutoya::Irasuto do
   let(:search_uri) { URI.parse(search_url) }
   let(:next_uri) { URI.parse(next_url) }
   let(:first_results) { (1..7).map { |index| "/2018/09/cat-#{index}.html" } }
-  let(:next_results) { %w[/2018/09/blog-post_34.html /2018/09/cat-9.html] }
+  let(:next_results) { %w[/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html] }
   let(:thumbnail_url) { 'https://1.bp.blogspot.com/example/s72-c/cat.png' }
 
   before do
@@ -19,7 +19,8 @@ RSpec.describe Irasutoya::Irasuto do
   end
 
   it 'returns all seven results on the default page without fetching the next page' do
-    expect(described_class.search(query: query).map(&:show_url)).to eq(first_results)
+    expected_urls = first_results.map { |path| "https://www.irasutoya.com#{path}" }
+    expect(described_class.search(query: query).map(&:show_url)).to eq(expected_urls)
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
@@ -27,9 +28,30 @@ RSpec.describe Irasutoya::Irasuto do
   it 'follows the advertised cursor and returns links with thumbnails from the second page' do
     links = described_class.search(query: query, page: 1)
 
-    expect(links.map(&:show_url)).to eq(next_results)
+    expect(links.map(&:show_url)).to eq(%w[
+      https://www.irasutoya.com/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html
+    ])
     expect(links.map(&:thumbnail_url)).to eq([thumbnail_url, thumbnail_url])
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'fetches the detail page from a root-relative search result' do
+    detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-1.html')
+    stub_html(detail_uri, File.read('spec/files/show.html'))
+
+    expect(described_class.search(query: query).first.fetch_irasuto).to have_attributes(
+      url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
+    )
+    expect(page_http).to have_received(:request_get).with(detail_uri.request_uri).once
+  end
+
+  it 'fetches the detail page from an absolute search result' do
+    detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-9.html')
+    stub_html(detail_uri, File.read('spec/files/show.html'))
+
+    expect(described_class.search(query: query, page: 1).last.fetch_irasuto).to have_attributes(
+      url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
+    )
   end
 
   it 'returns an empty array beyond the last page' do
@@ -48,7 +70,10 @@ RSpec.describe Irasutoya::Irasuto do
         </div>
       HTML
     end
-    html = "<html><body>#{results.join}#{pager}</body></html>"
+    stub_html(uri, "<html><body>#{results.join}#{pager}</body></html>")
+  end
+
+  def stub_html(uri, html)
     response = Net::HTTPOK.new('1.1', '200', 'OK')
     response['Content-Type'] = 'text/html; charset=UTF-8'
     allow(response).to receive(:body).and_return(html)
