@@ -74,7 +74,7 @@ module Irasutoya
         def request: (untyped, String) -> untyped
         def unread_redirect_body?: (untyped) -> bool
         def session_for: (untyped, untyped) -> untyped
-        def build_http: (untyped, URI::Generic?) -> Net::HTTP
+        def build_http: (untyped, URI::HTTP?) -> Net::HTTP
         def close_when_idle: () -> void
         def remaining_idle_time: () -> Float
         def monotonic_time: () -> Float
