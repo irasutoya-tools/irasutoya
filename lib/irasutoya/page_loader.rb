@@ -16,8 +16,11 @@ module Irasutoya
     def self.load_detail(url, fetch:, parse:)
       document = fetch.call(url)
       parsed = parse_detail(parse, document, url)
-      Irasuto.new(url: url, title: parsed.fetch(:title), description: parsed.fetch(:description),
-                  image_urls: parsed.fetch(:image_urls))
+      title = parsed.fetch(:title)
+      image_urls = parsed.fetch(:image_urls)
+      raise ArgumentError, 'URL does not point to an Irasutoya illustration post' if title.empty? || !image_urls.first
+
+      Irasuto.new(url: url, title: title, description: parsed.fetch(:description), image_urls: image_urls)
     end
 
     def self.parse_detail(parser, document, url)

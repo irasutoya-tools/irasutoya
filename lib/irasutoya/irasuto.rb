@@ -14,14 +14,11 @@ module Irasutoya
 
     def self.from_url(url)
       validate_input_url(url)
-      illustration = PageLoader.load_detail(
+      PageLoader.load_detail(
         url,
         fetch: ->(page_url) { fetch_page_and_parse(page_url) },
         parse: method(:parse_show_page)
       )
-      return illustration if !illustration.title.empty? && illustration.image_url
-
-      raise ArgumentError, 'URL does not point to an Irasutoya illustration post'
     end
 
     def initialize(url:, title:, description:, image_urls:)
