@@ -12,11 +12,17 @@ require_relative 'support/ordered_list_results'
 
 module PageFixtures
   def stub_page(filename)
+    stub_page_http.tap { |http| stub_html(http, File.read("spec/files/#{filename}")) }
+  end
+
+  def stub_html(http, html, path: nil)
     response = Net::HTTPOK.new('1.1', '200', 'OK')
     response['Content-Type'] = 'text/html; charset=UTF-8'
-    allow(response).to receive(:body).and_return(File.read("spec/files/#{filename}"))
-    allow(response).to receive(:read_body).and_yield(response.body)
-    stub_page_http.tap { |http| allow(http).to receive(:request_get).and_yield(response).and_return(response) }
+    allow(response).to receive(:body).and_return(html)
+    allow(response).to receive(:read_body).and_yield(html)
+    request = allow(http).to receive(:request_get)
+    request.with(path) if path
+    request.and_yield(response).and_return(response)
   end
 
   def stub_page_http

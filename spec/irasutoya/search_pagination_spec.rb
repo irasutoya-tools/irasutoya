@@ -33,7 +33,7 @@ RSpec.describe Irasutoya::Irasuto do
 
   it 'fetches the detail page from a root-relative search result' do
     detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-1.html')
-    stub_html(detail_uri, File.read('spec/files/show.html'))
+    stub_html(page_http, File.read('spec/files/show.html'), path: detail_uri.request_uri)
 
     expect(described_class.search(query: query).first.fetch_irasuto).to have_attributes(
       url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
@@ -43,7 +43,7 @@ RSpec.describe Irasutoya::Irasuto do
 
   it 'fetches the detail page from an absolute search result' do
     detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-9.html')
-    stub_html(detail_uri, File.read('spec/files/show.html'))
+    stub_html(page_http, File.read('spec/files/show.html'), path: detail_uri.request_uri)
 
     expect(described_class.search(query: query, page: 1).last.fetch_irasuto).to have_attributes(
       url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
@@ -55,18 +55,28 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  it 'fetches nothing until enumeration starts and stops at a page boundary' do
+    results = described_class.each_search_result(query: query)
+
+    expect(results).to be_an(Enumerator)
+    expect(page_http).not_to have_received(:request_get)
+    expect(results.take(7)).to all(be_a(Irasutoya::IrasutoLink))
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
+  end
+
+  it 'enumerates results in order through the last page with one request per page' do
+    expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
+
+    expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
   def stub_search_page(uri, paths, pager = '')
     results = paths.map do |path|
       %(<div class="box"><a href="#{path}">Image</a><a href="#{path}">Cat</a></div>)
     end
-    stub_html(uri, "<html><body>#{results.join}#{pager}</body></html>")
-  end
-
-  def stub_html(uri, html)
-    response = Net::HTTPOK.new('1.1', '200', 'OK')
-    response['Content-Type'] = 'text/html; charset=UTF-8'
-    allow(response).to receive(:body).and_return(html)
-    allow(response).to receive(:read_body).and_yield(html)
-    allow(page_http).to receive(:request_get).with(uri.request_uri).and_yield(response).and_return(response)
+    stub_html(page_http, "<html><body>#{results.join}#{pager}</body></html>", path: uri.request_uri)
   end
 end

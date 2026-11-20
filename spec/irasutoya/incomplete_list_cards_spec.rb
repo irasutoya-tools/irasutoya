@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 RSpec.describe 'Listings with incomplete result cards' do
-  let(:expected) { [['Mouse', '/2018/09/mouse.html'], ['Bird', '/2018/09/bird.html']] }
+  let(:expected) do
+    [
+      ['Mouse', 'https://www.irasutoya.com/2018/09/mouse.html'],
+      ['Bird', 'https://www.irasutoya.com/2018/09/bird.html']
+    ]
+  end
 
   before { stub_page('list_with_incomplete_cards.html') }
 

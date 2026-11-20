@@ -34,5 +34,16 @@ module Irasutoya
         parse: ->(document:) { parse_list_page(document: document) }
       )
     end
+
+    def each_irasuto_link(&block)
+      return enum_for(:each_irasuto_link) unless block
+
+      PageLoader.each_list_link(
+        list_url,
+        fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+        parse: ->(document:) { parse_list_page(document: document) },
+        &block
+      )
+    end
   end
 end
