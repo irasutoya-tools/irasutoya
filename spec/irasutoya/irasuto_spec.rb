@@ -140,6 +140,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { described_class.random }.to raise_error(TypeError, 'no implicit conversion of nil into String')
     end
 
+    it 'reports an empty feed without choosing an index or fetching a detail page' do
+      allow(feed_response).to receive(:read_body).and_yield('callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});')
+      expect(Random).not_to receive(:rand).with(0)
+      expect(page_http).not_to receive(:request_get)
+
+      expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no entries')
+    end
+
     it 'rejects an oversized count feed before choosing a random index' do
       stub_const('Irasutoya::Irasuto::MAX_FEED_BYTES', feed_body.bytesize - 1)
       expect(Random).not_to receive(:rand)
