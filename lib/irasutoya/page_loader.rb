@@ -30,12 +30,15 @@ module Irasutoya
     private_class_method :parse_detail
 
     def self.fetch_list_page(url, page, fetch)
+      visited = Set[url]
       document = fetch.call(url)
       page.times do
         next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
         return nil if next_href.nil? || next_href.empty?
 
         url = URI.join(url, next_href).to_s
+        return nil unless visited.add?(url)
+
         document = fetch.call(url)
       end
 

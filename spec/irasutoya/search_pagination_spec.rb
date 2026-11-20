@@ -12,8 +12,7 @@ RSpec.describe Irasutoya::Irasuto do
   let(:next_results) { %w[/2018/09/blog-post_34.html /2018/09/cat-9.html] }
 
   before do
-    next_link = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(next_href)}">Next</a>)
-    stub_search_page(search_uri, first_results, next_link)
+    stub_search_page(search_uri, first_results, next_href)
     stub_search_page(next_uri, next_results)
   end
 
@@ -33,10 +32,26 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
-  def stub_search_page(uri, paths, pager = '')
+  it 'returns no results after one fetch when the older link points to itself' do
+    stub_search_page(search_uri, first_results, search_uri.request_uri)
+
+    expect(described_class.search(query: query, page: 100)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+  end
+
+  it 'returns no results after two fetches when older links form a cycle' do
+    stub_search_page(next_uri, next_results, search_url)
+
+    expect(described_class.search(query: query, page: 100)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  def stub_search_page(uri, paths, older_href = nil)
     results = paths.map do |path|
       %(<div class="box"><a href="#{path}">Image</a><a href="#{path}">Cat</a></div>)
     end
+    pager = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(older_href)}">Next</a>) if older_href
     html = "<html><body>#{results.join}#{pager}</body></html>"
     response = Net::HTTPOK.new('1.1', '200', 'OK')
     response['Content-Type'] = 'text/html; charset=UTF-8'
