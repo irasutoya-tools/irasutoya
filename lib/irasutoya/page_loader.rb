@@ -3,19 +3,24 @@
 module Irasutoya
   module PageLoader
     def self.load_list(url, fetch:, parse:, page: 0)
-      document = fetch_list_page(url, page, fetch)
-      return [] unless document
+      listing = fetch_list_page(url, page, fetch)
+      return [] unless listing
 
+      document, page_url = listing
       parse.call(document: document).map do |parsed|
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: parsed.fetch(:show_url))
+        href = parsed.fetch(:show_url)
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href))
       end
     end
 
     def self.load_detail(url, fetch:, parse:)
       document = fetch.call(url)
       parsed = parse_detail(parse, document, url)
-      Irasuto.new(url: url, title: parsed.fetch(:title), description: parsed.fetch(:description),
-                  image_urls: parsed.fetch(:image_urls))
+      title = parsed.fetch(:title)
+      image_urls = parsed.fetch(:image_urls)
+      raise ArgumentError, 'URL does not point to an Irasutoya illustration post' if title.empty? || !image_urls.first
+
+      Irasuto.new(url: url, title: title, description: parsed.fetch(:description), image_urls: image_urls)
     end
 
     def self.parse_detail(parser, document, url)
@@ -38,15 +43,24 @@ module Irasutoya
         document = fetch.call(url)
       end
 
-      document
+      [document, effective_url(document, url)] if document
     end
     private_class_method :fetch_list_page
 
     def self.effective_url(document, requested_url)
-      document_url = document.url if document.respond_to?(:url)
-      document_url || requested_url
+      page_url = document.url if document.respond_to?(:url)
+      page_url || requested_url
     end
     private_class_method :effective_url
+
+    def self.resolve_detail_href(page_url, href)
+      return href if href.empty? || href.match?(/\A[a-z][a-z0-9+.-]*:/i)
+
+      URI.join(page_url, href).to_s
+    rescue URI::Error
+      href
+    end
+    private_class_method :resolve_detail_href
   end
 
   private_constant :PageLoader

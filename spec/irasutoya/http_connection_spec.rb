@@ -220,7 +220,7 @@ RSpec.describe 'Illustration HTTP connections' do
 
     title, charset = path == '/encoded' ? ['珈琲', 'Shift_JIS'] : [path, 'UTF-8']
     body = %(<div class="post"><div class="title"><h2>#{title}</h2></div></div>).encode(charset)
-    body << '<div class="entry"><img src="art.png"></div>' if path == '/2024/08/item.html'
+    body << '<div class="entry"><img src="art.png"></div>'
     http_response('200 OK', body, charset)
   end
 

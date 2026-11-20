@@ -1,6 +1,7 @@
 module Irasutoya
   class Irasuto
     MAX_FEED_BYTES: Integer
+    FEED_COUNT_TTL: Integer
 
     include Modules::HasDocumentFetcher::Methods
     include Modules::HasListPageParser::Methods
@@ -14,6 +15,7 @@ module Irasutoya
     attr_reader description: String
 
     @image_urls: Array[String]
+    self.@feed_count_cache: [Integer, Float]?
 
     def image_urls: -> Array[String]
     def image_url: -> String?
@@ -27,5 +29,9 @@ module Irasutoya
     private def self.validate_input_url: (String) -> void
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]
     private def self.random_url: -> String
+    private def self.random_entry: (?refresh: bool) -> Hash[String, untyped]?
+    private def self.cached_feed_count: -> Integer?
+    private def self.refresh_feed_count: -> [Integer, Hash[String, untyped]]
+    private def self.feed_count_time: -> Float
   end
 end

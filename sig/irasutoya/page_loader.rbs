@@ -14,7 +14,8 @@ module Irasutoya
     ) -> Irasuto
 
     private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String] }
-    private def self.fetch_list_page: (String, Integer, ^(String) -> untyped) -> untyped
+    private def self.fetch_list_page: (String, Integer, ^(String) -> untyped) -> [untyped, String]?
     private def self.effective_url: (untyped, String) -> String
+    private def self.resolve_detail_href: (String, String) -> String
   end
 end
