@@ -14,15 +14,23 @@
 
 ## Installation
 
+Irasutoya requires Ruby 3.3 or later.
+
 Add this line to your application's Gemfile:
 
 ```ruby
 gem 'irasutoya'
 ```
 
+Run `bundle install` to install the gem from RubyGems. To install it directly without a Gemfile, run:
+
+```sh
+gem install irasutoya
+```
+
 ## Quick start
 
-After adding the gem to your Gemfile, run `bundle install`. Save this example as `find_illustration.rb`:
+Save this example as `find_illustration.rb`:
 
 ```ruby
 require 'irasutoya'
@@ -37,7 +45,7 @@ else
 end
 ```
 
-Run `bundle exec ruby find_illustration.rb` from your application directory. The script searches Irasutoya and prints the title and image URL of the first match.
+From the directory where you saved the script, run `bundle exec ruby find_illustration.rb` if you installed with Bundler, or `ruby find_illustration.rb` if you installed with `gem install`. The script searches Irasutoya and prints the title and image URL of the first match.
 
 ## Usage
 
