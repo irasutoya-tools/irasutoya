@@ -35,6 +35,7 @@ RSpec.configure do |config|
   config.include PageFixtures
 
   config.before do
+    Irasutoya::Irasuto.instance_variable_set(:@feed_count_cache, nil)
     fetcher = Irasutoya::Modules::HasDocumentFetcher
     pool = fetcher.const_get(:HttpSessionPool).new
     stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(pool))

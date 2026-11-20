@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
+RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
   describe '.from_url' do
     it 'reopens a saved post URL with its title, description, and image' do
       url = 'https://www.irasutoya.com/2014/03/blog-post_5924.html'
@@ -16,10 +16,26 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
 
+    it 'trims relative image sources and skips blank sources in document order' do
+      stub_page('show_with_padded_image_sources.html')
+
+      expect(described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html').image_urls).to eq(%w[
+        https://www.irasutoya.com/2014/03/cat.png
+        https://www.irasutoya.com/2014/03/second.png
+      ])
+    end
+
     it 'rejects a search results page' do
       stub_page('list.html')
 
       expect { described_class.from_url('https://www.irasutoya.com/search?q=test') }
+        .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
+    end
+
+    it 'rejects a titled post with only missing or blank image sources' do
+      stub_page('show_without_image_sources.html')
+
+      expect { described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html') }
         .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
     end
 
@@ -29,6 +45,21 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       %w[https://example.com/2014/03/blog-post.html /2014/03/blog-post.html].each do |url|
         expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
       end
+    end
+
+    it 'rejects malformed URLs before opening a connection' do
+      expect(Net::HTTP).not_to receive(:new)
+
+      ['/search?q=猫', 'https://www.irasutoya.com:bad/post.html'].each do |url|
+        expect { described_class.from_url(url) }.to raise_error(ArgumentError, 'Invalid Irasutoya page URL')
+      end
+    end
+
+    it 'preserves URI errors raised while fetching a valid URL' do
+      http = stub_page_http
+      allow(http).to receive(:request_get).and_raise(URI::InvalidURIError)
+
+      expect { described_class.from_url('https://www.irasutoya.com/post.html') }.to raise_error(URI::InvalidURIError)
     end
   end
 
@@ -59,11 +90,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#random' do # rubocop:disable Metrics/BlockLength
     let(:feed_body) { File.read('spec/files/posts_summary.jsonp') }
     let(:feed_count) { 22_312 }
-    let(:feed_response) do
+    let(:feed_response) { jsonp_response(feed_body) }
+
+    def jsonp_response(body)
       Net::HTTPOK.new('1.1', '200', 'OK').tap do |response|
-        allow(response).to receive(:read_body).and_yield(feed_body)
+        allow(response).to receive(:read_body).and_yield(body)
       end
     end
+
     let(:feed_http) { instance_double(Net::HTTP) }
     let(:show_url) { 'http://www.irasutoya.com/2014/03/blog-post_5924.html' }
     let(:page_fixture) { 'show.html' }
@@ -72,7 +106,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
       allow(feed_http).to receive(:finish)
-      allow(Net::HTTP).to receive(:start).with('www.irasutoya.com', 443, use_ssl: true).and_yield(feed_http)
+      allow(Net::HTTP).to receive(:start)
+                         .with('www.irasutoya.com', 443, use_ssl: true, ignore_eof: false).and_yield(feed_http)
       allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(feed_response).and_return(feed_response)
       page_http
     end
@@ -115,6 +150,50 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       end
     end
 
+    it 'makes one feed request and one detail request with a fresh count' do
+      allow(Random).to receive(:rand).with(feed_count).and_return(0, 1)
+      expect(feed_http).to receive(:request_get).with(feed_path(1)).once
+                                   .and_yield(feed_response).and_return(feed_response)
+      expect(feed_http).to receive(:request_get).with(feed_path(2)).once
+                                   .and_yield(feed_response).and_return(feed_response)
+
+      2.times { expect(described_class.random.url).to eq(show_url) }
+
+      expect(page_http).to have_received(:request_get).with(URI.parse(show_url).request_uri).twice
+    end
+
+    it 'uses a refreshed count after the cache expires' do
+      allow(described_class).to receive(:feed_count_time).and_return(100.0)
+      described_class.random
+
+      allow(described_class).to receive(:feed_count_time).and_return(400.0)
+      updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
+      expect(feed_http).to receive(:request_get).with(feed_path(1)).ordered
+                                   .and_yield(updated_response).and_return(updated_response)
+      expect(Random).to receive(:rand).with(2).ordered.and_return(1)
+      expect(feed_http).to receive(:request_get).with(feed_path(2)).ordered
+                                   .and_yield(updated_response).and_return(updated_response)
+
+      expect(described_class.random.url).to eq(show_url)
+    end
+
+    it 'refreshes and resamples when the selected entry is missing after the feed shrinks' do
+      allow(Random).to receive(:rand).with(feed_count).and_return(0, feed_count - 1)
+      described_class.random
+
+      missing_entry = jsonp_response('callback({"feed":{"openSearch$totalResults":{"$t":"2"}}});')
+      updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
+      expect(feed_http).to receive(:request_get).with(feed_path(feed_count)).ordered
+                                   .and_yield(missing_entry).and_return(missing_entry)
+      expect(feed_http).to receive(:request_get).with(feed_path(1)).ordered
+                                   .and_yield(updated_response).and_return(updated_response)
+      expect(Random).to receive(:rand).with(2).ordered.twice.and_return(0, 1)
+      expect(feed_http).to receive(:request_get).with(feed_path(2)).ordered
+                                   .and_yield(updated_response).and_return(updated_response)
+
+      2.times { expect(described_class.random.url).to eq(show_url) }
+    end
+
     it 'raises an HTTP error before parsing a failed count response' do
       response = Net::HTTPBadRequest.new('1.1', '400', 'Bad Request')
       allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(response)
@@ -130,6 +209,20 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       expect(response).not_to receive(:read_body)
 
       expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
+    end
+
+    it 'raises a type error when the feed has no JSON payload' do
+      allow(feed_response).to receive(:read_body).and_yield('callback();')
+
+      expect { described_class.random }.to raise_error(TypeError, 'no implicit conversion of nil into String')
+    end
+
+    it 'reports an empty feed without choosing an index or fetching a detail page' do
+      allow(feed_response).to receive(:read_body).and_yield('callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});')
+      expect(Random).not_to receive(:rand).with(0)
+      expect(page_http).not_to receive(:request_get)
+
+      expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no entries')
     end
 
     it 'rejects an oversized count feed before choosing a random index' do
@@ -183,7 +276,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
     end
 
     it 'should return random irasuto with image_url' do
-      expect(Irasutoya::Irasuto.random.image_url).to eq('http://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
+      expect(Irasutoya::Irasuto.random.image_url).to eq('https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png')
     end
 
     it 'should not have postthumb_image_url when image size is 1' do
@@ -225,7 +318,6 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
   describe '#search' do # rubocop:disable Metrics/BlockLength
     let(:query) { '検索' }
     let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
-    let(:paginated_url) { "#{search_url}&max-results=20&start=40&by-date=false" }
     let(:results) { described_class.search(query: query) }
 
     let(:page_http) { stub_page('list.html') }
@@ -247,10 +339,10 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metric/BlockLength
       results
     end
 
-    it 'loads links from the paginated search URL with their detail URLs' do
-      link = Irasutoya::Irasuto.search(query: query, page: 2).first
+    it 'loads links from the initial search URL with their detail URLs' do
+      link = results.first
 
-      expect(page_http).to have_received(:request_get).with(URI.parse(paginated_url).request_uri).once
+      expect(page_http).to have_received(:request_get).with(URI.parse(search_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end

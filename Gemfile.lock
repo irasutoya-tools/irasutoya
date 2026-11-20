@@ -14,6 +14,7 @@ GEM
     csv (3.3.7)
     diff-lcs (1.6.2)
     ffi (1.17.4)
+    ffi (1.17.4-x86_64-linux-gnu)
     fileutils (1.8.1)
     formatador (1.2.3)
       reline
@@ -52,6 +53,8 @@ GEM
     nokogiri (1.19.7)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
+    nokogiri (1.19.7-x86_64-linux-gnu)
+      racc (~> 1.4)
     notiffany (0.1.3)
       nenv (~> 0.1)
       shellany (~> 0.0)
@@ -60,6 +63,7 @@ GEM
       ast (~> 2.4.1)
       racc
     prism (2.1.0)
+    prism (2.1.0-x86_64-linux-gnu)
     pry (0.16.1)
       coderay (~> 1.1)
       method_source (~> 1.0)
@@ -74,7 +78,7 @@ GEM
       logger
       prism (>= 1.6.0)
       tsort
-    regexp_parser (2.13.1)
+    regexp_parser (2.13.4)
     reline (0.7.0)
       io-console (~> 0.5)
     rspec (3.13.2)
@@ -136,10 +140,11 @@ GEM
 
 PLATFORMS
   ruby
+  x86_64-linux-gnu
 
 DEPENDENCIES
   base64
-  bundler (~> 2.0)
+  bundler (~> 4.0)
   gem-release
   guard
   guard-rspec
@@ -153,4 +158,4 @@ DEPENDENCIES
   steep
 
 BUNDLED WITH
-   2.4.14
+  4.1.0

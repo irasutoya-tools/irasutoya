@@ -48,6 +48,14 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(received.uniq.size).to eq(1)
   end
 
+  it 'rejects a truncated page before parsing and accepts a complete page on the next fetch' do
+    allow(Nokogiri::HTML).to receive(:parse).and_call_original
+
+    expect { fetch_detail('/truncated') }.to raise_error(EOFError)
+    expect(Nokogiri::HTML).not_to have_received(:parse)
+    expect(fetch_detail('/complete').title).to eq('/complete')
+  end
+
   it 'reconnects when the server closes an idle connection' do
     fetch_detail('/first')
     original_socket = requests.pop
@@ -104,6 +112,33 @@ RSpec.describe 'Illustration HTTP connections' do
   it 'follows a relative redirect on the same connection' do
     expect(fetch_detail('/redirect').title).to eq('/destination')
     expect(requests.pop).to equal(requests.pop)
+  end
+
+  it 'closes an unfinished redirect response and fetches the destination' do
+    allow(self).to receive(:response_for).with('/unfinished').and_return(unfinished_redirect('/destination'))
+    allow(self).to receive(:response_for).with('/destination').and_call_original
+
+    expect(fetch_detail('/unfinished').title).to eq('/destination')
+    redirect_socket, destination_socket = Array.new(2) { requests.pop }
+    expect(disconnections.pop).to equal(redirect_socket)
+    expect(destination_socket).not_to equal(redirect_socket)
+  end
+
+  it 'enforces the HTML byte limit at the redirect destination' do
+    oversized_body = 'a' * (4 * 1024 * 1024 + 1)
+    allow(self).to receive(:response_for).with('/unfinished').and_return(unfinished_redirect('/oversized'))
+    allow(self).to receive(:response_for).with('/oversized').and_return(http_response('200 OK', oversized_body))
+
+    expect { fetch_detail('/unfinished') }.to raise_error(Irasutoya::ResponseTooLargeError)
+    expect(requests.size).to eq(2)
+  end
+
+  it 'resolves relative image URLs against the redirect destination directory' do
+    illustration = fetch_detail('/legacy/item.html')
+    image_url = "#{trusted_origin}/2024/08/art.png"
+
+    expect(illustration.image_url).to eq(image_url)
+    expect(illustration.image_urls).to eq([image_url])
   end
 
   it 'fetches another origin while the first origin is waiting for a response' do
@@ -164,11 +199,16 @@ RSpec.describe 'Illustration HTTP connections' do
       nil until ["\r\n", nil].include?(socket.gets)
       requests << socket
       socket.write(response_for(path))
+      break if path == '/truncated'
     end
   end
 
   def response_for(path)
     return "HTTP/1.1 302 Found\r\nLocation: /destination\r\nContent-Length: 0\r\n\r\n" if path == '/redirect'
+
+    if path == '/legacy/item.html'
+      return "HTTP/1.1 302 Found\r\nLocation: /2024/08/item.html\r\nContent-Length: 0\r\n\r\n"
+    end
 
     if path == '/redirect-with-userinfo'
       target = trusted_origin.sub('://', '://user:pass@') + '/destination'
@@ -176,13 +216,19 @@ RSpec.describe 'Illustration HTTP connections' do
     end
 
     return http_response('404 Not Found', 'Missing illustration') if path == '/missing'
+    return "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n<p>Partial</p>" if path == '/truncated'
 
     title, charset = path == '/encoded' ? ['珈琲', 'Shift_JIS'] : [path, 'UTF-8']
     body = %(<div class="post"><div class="title"><h2>#{title}</h2></div></div>).encode(charset)
+    body << '<div class="entry"><img src="art.png"></div>'
     http_response('200 OK', body, charset)
   end
 
   def http_response(status, body, charset = 'UTF-8')
     "HTTP/1.1 #{status}\r\nContent-Type: text/html; charset=#{charset}\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}"
+  end
+
+  def unfinished_redirect(target)
+    "HTTP/1.1 302 Found\r\nLocation: #{target}\r\nTransfer-Encoding: chunked\r\n\r\n1\r\na\r\n"
   end
 end
