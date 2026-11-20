@@ -1,0 +1,5 @@
+module OpenURI
+  module Meta
+    def self.init: (Object io) -> nil
+  end
+end

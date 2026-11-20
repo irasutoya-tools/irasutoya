@@ -13,7 +13,11 @@ module Irasutoya
     end
 
     def fetch_irasuto
-      PageLoader.load_detail(show_url)
+      PageLoader.load_detail(
+        show_url,
+        fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+        parse: method(:parse_show_page)
+      )
     end
   end
 end
