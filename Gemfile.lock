@@ -78,7 +78,7 @@ GEM
       logger
       prism (>= 1.6.0)
       tsort
-    regexp_parser (2.13.1)
+    regexp_parser (2.13.4)
     reline (0.7.0)
       io-console (~> 0.5)
     rspec (3.13.2)

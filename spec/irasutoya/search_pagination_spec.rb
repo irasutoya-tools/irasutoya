@@ -9,7 +9,7 @@ RSpec.describe Irasutoya::Irasuto do
   let(:search_uri) { URI.parse(search_url) }
   let(:next_uri) { URI.parse(next_url) }
   let(:first_results) { (1..7).map { |index| "/2018/09/cat-#{index}.html" } }
-  let(:next_results) { %w[/2018/09/blog-post_34.html /2018/09/cat-9.html] }
+  let(:next_results) { %w[/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html] }
 
   before do
     stub_search_page(search_uri, first_results, next_href)
@@ -17,14 +17,36 @@ RSpec.describe Irasutoya::Irasuto do
   end
 
   it 'returns all seven results on the default page without fetching the next page' do
-    expect(described_class.search(query: query).map(&:show_url)).to eq(first_results)
+    expected_urls = first_results.map { |path| "https://www.irasutoya.com#{path}" }
+    expect(described_class.search(query: query).map(&:show_url)).to eq(expected_urls)
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
   it 'follows the advertised cursor to the second page' do
-    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(next_results)
+    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(%w[
+      https://www.irasutoya.com/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html
+    ])
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'fetches the detail page from a root-relative search result' do
+    detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-1.html')
+    stub_html(detail_uri, File.read('spec/files/show.html'))
+
+    expect(described_class.search(query: query).first.fetch_irasuto).to have_attributes(
+      url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
+    )
+    expect(page_http).to have_received(:request_get).with(detail_uri.request_uri).once
+  end
+
+  it 'fetches the detail page from an absolute search result' do
+    detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-9.html')
+    stub_html(detail_uri, File.read('spec/files/show.html'))
+
+    expect(described_class.search(query: query, page: 1).last.fetch_irasuto).to have_attributes(
+      url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
+    )
   end
 
   it 'returns an empty array beyond the last page' do
@@ -47,12 +69,27 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  it 'does not refetch the redirected page when its relative older link points to itself' do
+    redirected_uri = URI.join(search_url, '/archive/results?q=cat')
+    redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+    redirect['Location'] = redirected_uri.to_s
+    allow(page_http).to receive(:request_get).with(search_uri.request_uri).and_yield(redirect).and_return(redirect)
+    stub_search_page(redirected_uri, first_results, 'results?q=cat')
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(redirected_uri.request_uri).once
+  end
+
   def stub_search_page(uri, paths, older_href = nil)
     results = paths.map do |path|
       %(<div class="box"><a href="#{path}">Image</a><a href="#{path}">Cat</a></div>)
     end
     pager = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(older_href)}">Next</a>) if older_href
-    html = "<html><body>#{results.join}#{pager}</body></html>"
+    stub_html(uri, "<html><body>#{results.join}#{pager}</body></html>")
+  end
+
+  def stub_html(uri, html)
     response = Net::HTTPOK.new('1.1', '200', 'OK')
     response['Content-Type'] = 'text/html; charset=UTF-8'
     allow(response).to receive(:body).and_return(html)
