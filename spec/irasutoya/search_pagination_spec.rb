@@ -7,13 +7,14 @@ RSpec.describe Irasutoya::Irasuto do
   let(:next_href) { '/search?q=%E7%8C%AB&updated-max=2018-09-01T12:00:00%2B09:00&start=7&by-date=false' }
   let(:next_url) { "https://www.irasutoya.com#{next_href}" }
   let(:search_uri) { URI.parse(search_url) }
+  let(:first_page_uri) { search_uri }
   let(:next_uri) { URI.parse(next_url) }
   let(:first_results) { (1..7).map { |index| "/2018/09/cat-#{index}.html" } }
   let(:next_results) { %w[/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html] }
 
   before do
     next_link = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(next_href)}">Next</a>)
-    stub_search_page(search_uri, first_results, next_link)
+    stub_search_page(first_page_uri, first_results, next_link)
     stub_search_page(next_uri, next_results)
   end
 
@@ -71,6 +72,39 @@ RSpec.describe Irasutoya::Irasuto do
     expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  context 'when the search redirects to another directory' do
+    let(:first_page_uri) { URI.join(search_url, '/archive/cats/index.html') }
+    let(:next_href) { 'older.html' }
+    let(:next_url) { 'https://www.irasutoya.com/archive/cats/older.html' }
+    let(:next_results) { %w[cat-8.html https://www.irasutoya.com/2018/09/cat-9.html] }
+
+    before do
+      response = Net::HTTPFound.new('1.1', '302', 'Found')
+      response['Location'] = first_page_uri.request_uri
+      response['Content-Length'] = '0'
+      allow(response).to receive(:read_body)
+      allow(page_http).to receive(:request_get).with(search_uri.request_uri).and_yield(response).and_return(response)
+    end
+
+    it 'fetches the older page relative to the redirected page and returns its results' do
+      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(%w[
+        https://www.irasutoya.com/archive/cats/cat-8.html https://www.irasutoya.com/2018/09/cat-9.html
+      ])
+      expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
+      expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+    end
+
+    it 'resolves pagination and detail links from the effective URLs during enumeration' do
+      results = described_class.each_search_result(query: query).drop(first_results.size)
+
+      expect(results.map(&:show_url)).to eq(%w[
+        https://www.irasutoya.com/archive/cats/cat-8.html https://www.irasutoya.com/2018/09/cat-9.html
+      ])
+      expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
+      expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+    end
   end
 
   def stub_search_page(uri, paths, pager = '')
