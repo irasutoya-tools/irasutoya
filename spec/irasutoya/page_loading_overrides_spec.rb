@@ -33,6 +33,22 @@ RSpec.describe 'Page loading overrides' do
     end
   end
 
+  shared_examples 'detail post validation' do
+    it 'rejects a page with an image but no title' do
+      untitled_page = Nokogiri::HTML.parse('<div class="post entry"><img src="cat.png"></div>')
+      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(untitled_page)
+
+      expect { illustration }.to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
+    end
+
+    it 'rejects a titled post with only missing or blank image sources' do
+      imageless_page = Nokogiri::HTML.parse(File.read('spec/files/show_without_image_sources.html'))
+      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(imageless_page)
+
+      expect { illustration }.to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
+    end
+  end
+
   describe 'search' do
     let(:receiver) { Class.new(Irasutoya::Irasuto) }
     let(:list_url) { 'https://www.irasutoya.com/search?q=cat' }
@@ -73,11 +89,16 @@ RSpec.describe 'Page loading overrides' do
     end
 
     include_examples 'detail loading with receiver overrides'
+    include_examples 'detail post validation'
   end
 
   describe 'saved URL loading' do
     let(:receiver) { Class.new(Irasutoya::Irasuto) }
     let(:detail_url) { 'https://www.irasutoya.com/2014/03/blog-post_5924.html' }
+    let(:illustration) { receiver.from_url(detail_url) }
+
+    include_examples 'detail loading with receiver overrides'
+    include_examples 'detail post validation'
 
     it 'rejects malformed input before calling a fetch override' do
       expect(receiver).not_to receive(:fetch_page_and_parse)
@@ -115,5 +136,6 @@ RSpec.describe 'Page loading overrides' do
     let(:illustration) { receiver.fetch_irasuto }
 
     include_examples 'detail loading with receiver overrides'
+    include_examples 'detail post validation'
   end
 end
