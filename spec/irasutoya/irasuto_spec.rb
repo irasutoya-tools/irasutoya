@@ -16,6 +16,15 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
 
+    it 'trims relative image sources and skips blank sources in document order' do
+      stub_page('show_with_padded_image_sources.html')
+
+      expect(described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html').image_urls).to eq(%w[
+        https://www.irasutoya.com/2014/03/cat.png
+        https://www.irasutoya.com/2014/03/second.png
+      ])
+    end
+
     it 'rejects a search results page' do
       stub_page('list.html')
 
