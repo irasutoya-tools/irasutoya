@@ -100,6 +100,8 @@ module Irasutoya
       end
 
       class HttpSessionPool
+        MAX_CONNECTIONS_PER_ORIGIN = 4
+
         def get(uri)
           proxy = uri.find_proxy
           # @type var key: origin
@@ -108,14 +110,19 @@ module Irasutoya
         end
 
         def close_inherited_connections
-          @sessions.each_value(&:close_inherited_connection)
-          initialize
+          @sessions.each_value { |sessions| sessions.each_key(&:close_inherited_connection) }
+          initialize(max_connections: @max_connections)
         end
 
-        def initialize
+        def initialize(max_connections: MAX_CONNECTIONS_PER_ORIGIN)
+          unless max_connections.is_a?(Integer) && max_connections.positive?
+            raise ArgumentError, 'Connection limit must be a positive integer'
+          end
+
+          @max_connections = max_connections
           @lock = Mutex.new
+          @available = ConditionVariable.new
           @sessions = {}
-          @users = Hash.new(0)
         end
 
         private
@@ -128,24 +135,51 @@ module Irasutoya
             begin
               thread.handle_interrupt(FetchDeadlineExceeded => :immediate) { yield session }
             ensure
-              @lock.synchronize { @users[key] -= 1 }
+              release_session(key, session)
             end
           end
         end
 
         def acquire_session(key)
           @lock.synchronize do
-            @users[key] += 1
-            @sessions[key] ||= HttpSession.new { remove_idle_session(key) }
+            loop do
+              sessions = (@sessions[key] ||= {})
+              session = sessions.key(false)
+              session ||= new_session(key) if sessions.size < @max_connections
+              next wait_for_session unless session
+
+              sessions[session] = true
+              return session
+            end
           end
         end
 
-        def remove_idle_session(key)
-          @lock.synchronize do
-            return false unless @users[key].zero?
+        def new_session(key)
+          HttpSession.new { |session| remove_idle_session(key, session) }
+        end
 
-            @sessions.delete(key)
-            @users.delete(key)
+        def wait_for_session
+          # A fetch may expire while waiting, before it has a session to release.
+          # @type var thread: untyped
+          thread = Thread
+          thread.handle_interrupt(FetchDeadlineExceeded => :immediate) { @available.wait(@lock) }
+        end
+
+        def release_session(key, session)
+          @lock.synchronize do
+            @sessions.fetch(key)[session] = false
+            @available.broadcast
+          end
+        end
+
+        def remove_idle_session(key, session)
+          @lock.synchronize do
+            sessions = @sessions.fetch(key)
+            return false if sessions.fetch(session)
+
+            sessions.delete(session)
+            @sessions.delete(key) if sessions.empty?
+            @available.broadcast
             true
           end
         end
@@ -226,7 +260,7 @@ module Irasutoya
           return remaining if remaining.positive?
 
           @http.finish if @http&.started?
-          @on_idle.call ? remaining : IDLE_TIMEOUT
+          @on_idle.call(self) ? remaining : IDLE_TIMEOUT
         end
 
         def monotonic_time
