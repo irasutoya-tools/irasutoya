@@ -3,11 +3,13 @@
 module Irasutoya
   module PageLoader
     def self.load_list(url, fetch:, parse:, page: 0)
-      document = fetch_list_page(url, page, fetch)
-      return [] unless document
+      listing = fetch_list_page(url, page, fetch)
+      return [] unless listing
 
+      document, page_url = listing
       parse.call(document: document).map do |parsed|
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: parsed.fetch(:show_url))
+        href = parsed.fetch(:show_url)
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href))
       end
     end
 
@@ -24,8 +26,7 @@ module Irasutoya
       end
       return parser.call(document: document) unless accepts_url
 
-      page_url = document.url if document.respond_to?(:url)
-      parser.call(document: document, url: page_url || url)
+      parser.call(document: document, url: effective_url(document, url))
     end
     private_class_method :parse_detail
 
@@ -35,13 +36,28 @@ module Irasutoya
         next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
         return nil if next_href.nil? || next_href.empty?
 
-        url = URI.join(url, next_href).to_s
+        url = URI.join(effective_url(document, url), next_href).to_s
         document = fetch.call(url)
       end
 
-      document
+      [document, effective_url(document, url)] if document
     end
     private_class_method :fetch_list_page
+
+    def self.effective_url(document, requested_url)
+      page_url = document.url if document.respond_to?(:url)
+      page_url || requested_url
+    end
+    private_class_method :effective_url
+
+    def self.resolve_detail_href(page_url, href)
+      return href if href.empty? || href.match?(/\A[a-z][a-z0-9+.-]*:/i)
+
+      URI.join(page_url, href).to_s
+    rescue URI::Error
+      href
+    end
+    private_class_method :resolve_detail_href
   end
 
   private_constant :PageLoader
