@@ -68,4 +68,25 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
     end
   end
+
+  it 'fetches a path-relative category result from the redirected listing location' do
+    list_url = 'https://www.irasutoya.com/search/label/cats'
+    category = described_class.new(title: 'Cats', list_url: list_url)
+    http = stub_page('show.html')
+    redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+    redirect['Location'] = '/archive/2018/09/list.html'
+    redirect['Content-Length'] = '0'
+    allow(redirect).to receive(:read_body).and_return('')
+    allow(http).to receive(:request_get).with('/search/label/cats').and_yield(redirect).and_return(redirect)
+    listing = Net::HTTPOK.new('1.1', '200', 'OK')
+    html = '<div class="box"><a href="cat-1.html">Image</a><a href="cat-1.html">Cat</a></div>'
+    allow(listing).to receive(:body).and_return(html)
+    allow(listing).to receive(:read_body).and_yield(html)
+    allow(http).to receive(:request_get).with(redirect['Location']).and_yield(listing).and_return(listing)
+
+    expect(category.fetch_irasuto_links.first.fetch_irasuto).to have_attributes(
+      url: 'https://www.irasutoya.com/archive/2018/09/cat-1.html', title: '太った少年のイラスト（肥満）'
+    )
+    expect(http).to have_received(:request_get).with('/archive/2018/09/cat-1.html').once
+  end
 end

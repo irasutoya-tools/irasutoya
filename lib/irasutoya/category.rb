@@ -39,7 +39,11 @@ module Irasutoya
     end
 
     def fetch_irasuto_links
-      PageLoader.load_list(list_url)
+      PageLoader.load_list(
+        list_url,
+        fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+        parse: ->(document:) { parse_list_page(document: document) }
+      )
     end
   end
 end

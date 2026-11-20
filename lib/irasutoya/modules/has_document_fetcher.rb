@@ -8,6 +8,7 @@ module Irasutoya
     module HasDocumentFetcher
       FETCH_TIMEOUT = 10
       MAX_HTML_BYTES = 4 * 1024 * 1024
+      REDIRECT_CODES = %w[301 302 303 307 308].freeze
 
       # Net::HTTP retries Timeout::Error, so translate the deadline at the fetch boundary.
       class FetchDeadlineExceeded < StandardError; end
@@ -19,9 +20,9 @@ module Irasutoya
       end
 
       module Methods
-        def fetch_page_and_parse(url)
+        def fetch_page_and_parse(url, uri: nil)
           with_fetch_timeout do
-            HTTP_DOCUMENT.open(URI.parse(url)) do |page|
+            HTTP_DOCUMENT.open(uri || URI.parse(url)) do |page|
               Nokogiri::HTML.parse(page, page.base_uri.to_s, page.charset)
             end
           end
@@ -38,7 +39,6 @@ module Irasutoya
 
       class HttpDocument
         TRUSTED_HOST = 'www.irasutoya.com'
-        REDIRECT_CODES = %w[301 302 303 307 308].freeze
         MAX_REDIRECTS = 10
 
         def open(uri, &)
@@ -89,7 +89,7 @@ module Irasutoya
 
         def response_document(uri, response)
           # @type var document: untyped
-          document = StringIO.new(response.body.to_s)
+          document = StringIO.new(REDIRECT_CODES.include?(response.code) ? '' : response.body.to_s)
           document.tap do
             OpenURI::Meta.init(document)
             document.base_uri = uri
@@ -156,10 +156,7 @@ module Irasutoya
 
         def get(uri, proxy)
           @lock.synchronize do
-            http = session_for(uri, proxy)
-            http.request_get(uri.request_uri) do |response|
-              response.body = ResponseFetcher.read_body(http, response, MAX_HTML_BYTES)
-            end
+            request(session_for(uri, proxy), uri.request_uri)
           ensure
             @idle_since = monotonic_time
           end
@@ -180,6 +177,23 @@ module Irasutoya
         end
 
         private
+
+        def request(http, path)
+          http.request_get(path) do |response|
+            if unread_redirect_body?(response)
+              http.finish
+              # Exit the request before Net::HTTP automatically reads the body.
+              return response
+            end
+
+            response.body = ResponseFetcher.read_body(http, response, MAX_HTML_BYTES)
+          end
+        end
+
+        def unread_redirect_body?(response)
+          REDIRECT_CODES.include?(response.code) &&
+            (response['content-length'] != '0' || response.key?('transfer-encoding'))
+        end
 
         def session_for(uri, proxy)
           return @http if @http&.started?
