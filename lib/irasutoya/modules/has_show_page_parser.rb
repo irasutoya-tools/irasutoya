@@ -31,8 +31,8 @@ module Irasutoya
 
           def image_urls_from(document:, url:)
             document.css('.entry').search('img').filter_map do |img|
-              source = img[:src]
-              next if source.nil? || source.strip.empty?
+              source = img[:src]&.strip
+              next if source.nil? || source.empty?
 
               source.match?(/\A[a-z][a-z0-9+.-]*:/i) ? source : URI.join(url, source).to_s
             end
