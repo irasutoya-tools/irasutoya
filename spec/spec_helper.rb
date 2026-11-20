@@ -36,9 +36,8 @@ RSpec.configure do |config|
 
   config.before do
     Irasutoya::Irasuto.instance_variable_set(:@feed_count_cache, nil)
-    fetcher = Irasutoya::Modules::HasDocumentFetcher
-    pool = fetcher.const_get(:HttpSessionPool).new
-    stub_const("#{fetcher}::HTTP_DOCUMENT", fetcher.const_get(:HttpDocument).new(pool))
+    pool = Irasutoya.const_get(:HttpSessionPool).new
+    stub_const('Irasutoya::HTTP_TRANSPORT', pool)
   end
 
   # Enable flags like --only-failures and --next-failure

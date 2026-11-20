@@ -97,19 +97,13 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         allow(response).to receive(:read_body).and_yield(body)
       end
     end
-
-    let(:feed_http) { instance_double(Net::HTTP) }
     let(:show_url) { 'http://www.irasutoya.com/2014/03/blog-post_5924.html' }
     let(:page_fixture) { 'show.html' }
     let(:page_http) { stub_page(page_fixture) }
 
     before do
       allow(Random).to receive(:rand).with(feed_count).and_return(0)
-      allow(feed_http).to receive(:finish)
-      allow(Net::HTTP).to receive(:start)
-                         .with('www.irasutoya.com', 443, use_ssl: true, ignore_eof: false).and_yield(feed_http)
-      allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(feed_response).and_return(feed_response)
-      page_http
+      allow(page_http).to receive(:request_get).with(feed_path(1)).and_yield(feed_response).and_return(feed_response)
     end
 
     def feed_path(index)
@@ -117,14 +111,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     end
 
     it 'returns the first entry for a draw of zero without requesting index zero' do
-      expect(feed_http).to receive(:request_get).with(feed_path(1)).once.and_yield(feed_response).and_return(feed_response)
+      expect(page_http).to receive(:request_get).with(feed_path(1)).once.and_yield(feed_response).and_return(feed_response)
 
       expect(described_class.random.url).to eq(show_url)
     end
 
     it 'requests the last reported index for the highest draw' do
       allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
-      expect(feed_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(feed_response).and_return(feed_response)
+      expect(page_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(feed_response).and_return(feed_response)
 
       expect(described_class.random.url).to eq(show_url)
     end
@@ -152,14 +146,14 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
 
     it 'makes one feed request and one detail request with a fresh count' do
       allow(Random).to receive(:rand).with(feed_count).and_return(0, 1)
-      expect(feed_http).to receive(:request_get).with(feed_path(1)).once
+      expect(page_http).to receive(:request_get).with(feed_path(1)).once
                                    .and_yield(feed_response).and_return(feed_response)
-      expect(feed_http).to receive(:request_get).with(feed_path(2)).once
+      expect(page_http).to receive(:request_get).with(feed_path(2)).once
                                    .and_yield(feed_response).and_return(feed_response)
+
+      expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).twice
 
       2.times { expect(described_class.random.url).to eq(show_url) }
-
-      expect(page_http).to have_received(:request_get).with(URI.parse(show_url).request_uri).twice
     end
 
     it 'uses a refreshed count after the cache expires' do
@@ -168,10 +162,10 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
 
       allow(described_class).to receive(:feed_count_time).and_return(400.0)
       updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
-      expect(feed_http).to receive(:request_get).with(feed_path(1)).ordered
+      expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
                                    .and_yield(updated_response).and_return(updated_response)
       expect(Random).to receive(:rand).with(2).ordered.and_return(1)
-      expect(feed_http).to receive(:request_get).with(feed_path(2)).ordered
+      expect(page_http).to receive(:request_get).with(feed_path(2)).ordered
                                    .and_yield(updated_response).and_return(updated_response)
 
       expect(described_class.random.url).to eq(show_url)
@@ -183,12 +177,12 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
 
       missing_entry = jsonp_response('callback({"feed":{"openSearch$totalResults":{"$t":"2"}}});')
       updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
-      expect(feed_http).to receive(:request_get).with(feed_path(feed_count)).ordered
+      expect(page_http).to receive(:request_get).with(feed_path(feed_count)).ordered
                                    .and_yield(missing_entry).and_return(missing_entry)
-      expect(feed_http).to receive(:request_get).with(feed_path(1)).ordered
+      expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
                                    .and_yield(updated_response).and_return(updated_response)
       expect(Random).to receive(:rand).with(2).ordered.twice.and_return(0, 1)
-      expect(feed_http).to receive(:request_get).with(feed_path(2)).ordered
+      expect(page_http).to receive(:request_get).with(feed_path(2)).ordered
                                    .and_yield(updated_response).and_return(updated_response)
 
       2.times { expect(described_class.random.url).to eq(show_url) }
@@ -196,7 +190,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
 
     it 'raises an HTTP error before parsing a failed count response' do
       response = Net::HTTPBadRequest.new('1.1', '400', 'Bad Request')
-      allow(feed_http).to receive(:request_get).with(feed_path(1)).and_yield(response)
+      allow(page_http).to receive(:request_get).with(feed_path(1)).and_yield(response)
       expect(response).not_to receive(:read_body)
 
       expect { described_class.random }.to raise_error(Net::HTTPClientException, /400.*Bad Request/)
@@ -205,10 +199,19 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     it 'raises an HTTP error before parsing a failed entry response' do
       response = Net::HTTPServiceUnavailable.new('1.1', '503', 'Service Unavailable')
       allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
-      allow(feed_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(response)
+      allow(page_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(response)
       expect(response).not_to receive(:read_body)
 
       expect { described_class.random }.to raise_error(Net::HTTPFatalError, /503.*Service Unavailable/)
+    end
+
+    it 'rejects feed redirects without requesting their target' do
+      response = Net::HTTPFound.new('1.1', '302', 'Found')
+      response['Location'] = show_url
+      allow(page_http).to receive(:request_get).with(feed_path(1)).and_yield(response)
+      expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
+
+      expect { described_class.random }.to raise_error(Net::HTTPRetriableError, /302.*Found/)
     end
 
     it 'raises a type error when the feed has no JSON payload' do
@@ -220,7 +223,7 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     it 'reports an empty feed without choosing an index or fetching a detail page' do
       allow(feed_response).to receive(:read_body).and_yield('callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});')
       expect(Random).not_to receive(:rand).with(0)
-      expect(page_http).not_to receive(:request_get)
+      expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
 
       expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no entries')
     end
@@ -237,8 +240,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       oversized = Net::HTTPOK.new('1.1', '200', 'OK')
       allow(oversized).to receive(:read_body).and_yield(feed_body).and_yield(' ')
       allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
-      allow(feed_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(oversized)
-      expect(page_http).not_to receive(:request_get)
+      allow(page_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(oversized)
+      expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
 
       expect { described_class.random }.to raise_error(Irasutoya::ResponseTooLargeError)
     end
@@ -260,9 +263,9 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(page_http).to have_received(:request_get).with(URI.parse(show_url).request_uri).once
     end
 
-    it 'rejects an off-origin feed link before opening a page connection' do
+    it 'rejects an off-origin feed link before requesting a detail page' do
       allow(feed_response).to receive(:read_body).and_yield(feed_body.gsub('www.irasutoya.com', 'example.com'))
-      expect(Net::HTTP).not_to receive(:new)
+      expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
 
       expect { Irasutoya::Irasuto.random }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
     end

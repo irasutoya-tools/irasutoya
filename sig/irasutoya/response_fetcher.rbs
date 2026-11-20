@@ -10,6 +10,5 @@ module Irasutoya
     private def self.request: (URI::HTTP, Integer, bool) -> ([String, String?] | String)
     private def self.redirect_uri: (URI::HTTP, String) -> URI::HTTP
     def self.read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
-    private def self.abort_download: (Net::HTTP, Integer) -> bot
   end
 end
