@@ -136,11 +136,15 @@ RSpec.describe 'Illustration HTTP connections' do
       .to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
   end
 
-  it 'uses http_proxy for the HTTPS feed when https_proxy is unset' do
+  it 'uses decoded http_proxy credentials for the HTTPS feed when https_proxy is unset' do
     %w[HTTP_PROXY no_proxy NO_PROXY].each do |name|
       allow(ENV).to receive(:[]).with(name).and_return(nil)
     end
-    allow(ENV).to receive(:[]).with('http_proxy').and_return(origin)
+    proxy_url = origin.sub('://', '://proxy%2Buser:p%40ss:word+here@')
+    allow(ENV).to receive(:[]).with('http_proxy').and_return(proxy_url)
+    expect(Net::HTTP).to receive(:new)
+      .with('www.irasutoya.com', 443, '127.0.0.1', listener.addr[1], 'proxy+user', 'p@ss:word here')
+      .and_call_original
     allow(self).to receive(:response_for).and_return(http_response('502 Bad Gateway', ''))
 
     expect { Irasutoya::Irasuto.random }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)

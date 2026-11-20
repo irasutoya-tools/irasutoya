@@ -162,7 +162,7 @@ module Irasutoya
     end
 
     def build_http(uri, proxy)
-      proxy_user, proxy_password = proxy&.userinfo&.split(':')
+      proxy_user, proxy_password = [proxy&.user, proxy&.password].map { |value| CGI.unescape(value) if value }
       Net::HTTP.new(uri.hostname, uri.port, proxy&.hostname, proxy&.port, proxy_user, proxy_password).tap do |http|
         http.use_ssl = uri.scheme == 'https'
         http.ignore_eof = false
