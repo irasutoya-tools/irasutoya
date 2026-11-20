@@ -119,6 +119,30 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(redirected_uri.request_uri).once
   end
 
+  context 'when the older page redirects to the first page' do
+    before do
+      redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+      redirect['Location'] = search_uri.request_uri
+      redirect['Content-Length'] = '0'
+      allow(redirect).to receive(:read_body)
+      allow(page_http).to receive(:request_get).with(next_uri.request_uri).and_yield(redirect).and_return(redirect)
+    end
+
+    it 'returns the redirected results for the requested page' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
+    end
+
+    it 'stops enumeration before yielding the redirected results again' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+      results = described_class.each_search_result(query: query).take(expected_urls.size + 1)
+
+      expect(results.map(&:show_url)).to eq(expected_urls)
+      expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+    end
+  end
+
   context 'when the search redirects to another directory' do
     let(:first_page_uri) { URI.join(search_url, '/archive/cats/index.html') }
     let(:next_href) { 'older.html' }

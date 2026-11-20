@@ -46,13 +46,18 @@ module Irasutoya
     private_class_method :list_links
 
     def self.fetch_list_page(url, page, fetch)
-      each_list_page(url, fetch) do |document, page_url|
-        return [document, page_url] if page <= 0
+      visited = Set[url]
+      document = fetch.call(url)
+      page.times do
+        page_url = effective_url(document, url)
+        visited.add(page_url)
+        url = older_page_url(document, page_url)
+        return nil unless url && visited.add?(url)
 
-        page -= 1
+        document = fetch.call(url)
       end
 
-      nil
+      [document, effective_url(document, url)] if document
     end
     private_class_method :fetch_list_page
 
