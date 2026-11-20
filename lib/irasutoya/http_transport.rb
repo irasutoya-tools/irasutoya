@@ -7,10 +7,10 @@ module Irasutoya
   class HttpSessionPool
     MAX_CONNECTIONS_PER_ORIGIN = 4
 
-    def request(uri, &)
+    def request(uri, proxy_from_http_env: false, &)
       raise ArgumentError, 'Expected an HTTP or HTTPS host' unless uri.hostname
 
-      proxy = uri.find_proxy
+      proxy = proxy_lookup_uri(uri, proxy_from_http_env).find_proxy
       raise "Unsupported proxy scheme: #{proxy.scheme}" if proxy && proxy.scheme != 'http'
 
       # @type var key: origin
@@ -51,6 +51,13 @@ module Irasutoya
     end
 
     private
+
+    def proxy_lookup_uri(uri, proxy_from_http_env)
+      return uri unless proxy_from_http_env
+
+      # Net::HTTP looks up the proxy with an HTTP URI even for TLS connections.
+      URI::HTTP.new('http', nil, uri.host, uri.port, nil, nil, nil, nil, nil)
+    end
 
     def abort_download(http, max_bytes)
       http.finish

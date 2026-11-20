@@ -136,6 +136,17 @@ RSpec.describe 'Illustration HTTP connections' do
       .to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
   end
 
+  it 'uses http_proxy for the HTTPS feed when https_proxy is unset' do
+    %w[HTTP_PROXY no_proxy NO_PROXY].each do |name|
+      allow(ENV).to receive(:[]).with(name).and_return(nil)
+    end
+    allow(ENV).to receive(:[]).with('http_proxy').and_return(origin)
+    allow(self).to receive(:response_for).and_return(http_response('502 Bad Gateway', ''))
+
+    expect { Irasutoya::Irasuto.random }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+    expect(self).to have_received(:response_for).with('www.irasutoya.com:443')
+  end
+
   it 'closes idle connections without waiting for another request' do
     session_class = Irasutoya.const_get(:HttpSession)
     stub_const("#{session_class}::IDLE_TIMEOUT", 0.1)

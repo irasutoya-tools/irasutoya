@@ -26,7 +26,7 @@ module Irasutoya
 
     def self.request(uri, max_bytes, follow_redirects)
       body = ''.b
-      response = HTTP_TRANSPORT.request(uri) do |http, reply|
+      response = HTTP_TRANSPORT.request(uri, proxy_from_http_env: true) do |http, reply|
         return reply.fetch('location') if follow_redirects && REDIRECT_CODES.include?(reply.code)
 
         reply.value
