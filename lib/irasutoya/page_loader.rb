@@ -24,8 +24,7 @@ module Irasutoya
       end
       return parser.call(document: document) unless accepts_url
 
-      page_url = document.url if document.respond_to?(:url)
-      parser.call(document: document, url: page_url || url)
+      parser.call(document: document, url: effective_url(document, url))
     end
     private_class_method :parse_detail
 
@@ -35,13 +34,19 @@ module Irasutoya
         next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
         return nil if next_href.nil? || next_href.empty?
 
-        url = URI.join(url, next_href).to_s
+        url = URI.join(effective_url(document, url), next_href).to_s
         document = fetch.call(url)
       end
 
       document
     end
     private_class_method :fetch_list_page
+
+    def self.effective_url(document, requested_url)
+      document_url = document.url if document.respond_to?(:url)
+      document_url || requested_url
+    end
+    private_class_method :effective_url
   end
 
   private_constant :PageLoader
