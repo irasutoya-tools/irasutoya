@@ -11,10 +11,10 @@ RSpec.describe Irasutoya::Irasuto do
   let(:next_uri) { URI.parse(next_url) }
   let(:first_results) { (1..7).map { |index| "/2018/09/cat-#{index}.html" } }
   let(:next_results) { %w[/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html] }
+  let(:thumbnail_url) { 'https://1.bp.blogspot.com/example/s72-c/cat.png' }
 
   before do
-    next_link = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(next_href)}">Next</a>)
-    stub_search_page(first_page_uri, first_results, next_link)
+    stub_search_page(first_page_uri, first_results, next_href)
     stub_search_page(next_uri, next_results)
   end
 
@@ -25,10 +25,13 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
-  it 'follows the advertised cursor to the second page' do
-    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(%w[
+  it 'follows the advertised cursor and returns links with thumbnails from the second page' do
+    links = described_class.search(query: query, page: 1)
+
+    expect(links.map(&:show_url)).to eq(%w[
       https://www.irasutoya.com/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html
     ])
+    expect(links.map(&:thumbnail_url)).to eq([thumbnail_url, thumbnail_url])
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
@@ -68,10 +71,52 @@ RSpec.describe Irasutoya::Irasuto do
 
   it 'enumerates results in order through the last page with one request per page' do
     expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
+    links = described_class.each_search_result(query: query).to_a
 
-    expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+    expect(links.map(&:show_url)).to eq(expected_urls)
+    expect(links.map(&:thumbnail_url)).to eq([thumbnail_url] * expected_urls.size)
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'stops enumeration when older links form a cycle' do
+    stub_search_page(next_uri, next_results, search_url)
+    expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
+
+    results = described_class.each_search_result(query: query).take(expected_urls.size + 1)
+
+    expect(results.map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'returns no results after one fetch when the older link points to itself' do
+    stub_search_page(search_uri, first_results, search_uri.request_uri)
+
+    expect(described_class.search(query: query, page: 100)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+  end
+
+  it 'returns no results after two fetches when older links form a cycle' do
+    stub_search_page(next_uri, next_results, search_url)
+
+    expect(described_class.search(query: query, page: 100)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'does not refetch the redirected page when its relative older link points to itself' do
+    redirected_uri = URI.join(search_url, '/archive/results?q=cat')
+    redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+    redirect['Location'] = redirected_uri.to_s
+    redirect['Content-Length'] = '0'
+    allow(redirect).to receive(:read_body)
+    allow(page_http).to receive(:request_get).with(search_uri.request_uri).and_yield(redirect).and_return(redirect)
+    stub_search_page(redirected_uri, first_results, 'results?q=cat')
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(redirected_uri.request_uri).once
   end
 
   context 'when the search redirects to another directory' do
@@ -107,10 +152,18 @@ RSpec.describe Irasutoya::Irasuto do
     end
   end
 
-  def stub_search_page(uri, paths, pager = '')
+  def stub_search_page(uri, paths, older_href = nil)
     results = paths.map do |path|
-      %(<div class="box"><a href="#{path}">Image</a><a href="#{path}">Cat</a></div>)
+      <<~HTML
+        <div class="box">
+          <div class="boxim">
+            <a href="#{path}"><script>document.write(bp_thumbnail_resize("#{thumbnail_url}", 72));</script></a>
+          </div>
+          <a href="#{path}">Cat</a>
+        </div>
+      HTML
     end
+    pager = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(older_href)}">Next</a>) if older_href
     stub_html(page_http, "<html><body>#{results.join}#{pager}</body></html>", path: uri.request_uri)
   end
 end

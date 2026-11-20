@@ -5,11 +5,12 @@ module Irasutoya
     include Modules::HasDocumentFetcher
     include Modules::HasShowPageParser
 
-    attr_reader :title, :show_url
+    attr_reader :title, :show_url, :thumbnail_url
 
-    def initialize(title:, show_url:)
+    def initialize(title:, show_url:, thumbnail_url: nil)
       @title = title
       @show_url = show_url
+      @thumbnail_url = thumbnail_url
     end
 
     def fetch_irasuto

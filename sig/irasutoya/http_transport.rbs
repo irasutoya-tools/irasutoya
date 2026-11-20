@@ -1,0 +1,56 @@
+module Irasutoya
+  class FetchDeadlineExceeded < StandardError
+  end
+
+  class HttpSessionPool
+    type origin = [Integer, String, String, Integer, String?]
+
+    MAX_CONNECTIONS_PER_ORIGIN: Integer
+    @max_connections: Integer
+    @lock: Mutex
+    @available: ConditionVariable
+    @sessions: Hash[origin, Hash[HttpSession, bool]]
+
+    def request: (URI::HTTP, ?proxy_from_http_env: bool) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
+    def read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
+    def initialize: (?max_connections: Integer) -> void
+    def close_inherited_connections: () -> void
+
+    private
+
+    def proxy_lookup_uri: (URI::HTTP, bool) -> URI::HTTP
+    def abort_download: (Net::HTTP, Integer) -> bot
+    def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
+    def acquire_session: (origin) -> HttpSession
+    def new_session: (origin) -> HttpSession
+    def wait_for_session: () -> void
+    def release_session: (origin, HttpSession) -> void
+    def remove_idle_session: (origin, HttpSession) -> bool
+  end
+
+  class HttpSession
+    IDLE_TIMEOUT: Float
+    @lock: Mutex
+    @on_idle: ^(HttpSession) -> bool
+    @http: untyped
+    @idle_since: Float
+
+    def request: (URI::HTTP, URI::Generic?) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
+    def initialize: () { (HttpSession) -> bool } -> void
+    def close_inherited_connection: () -> void
+
+    private
+
+    def session_for: (untyped, untyped) -> untyped
+    def build_http: (untyped, untyped) -> Net::HTTP
+    def close_when_idle: () -> void
+    def remaining_idle_time: () -> Float
+    def monotonic_time: () -> Float
+  end
+
+  HTTP_TRANSPORT: HttpSessionPool
+
+  module ForkCleanup
+    def _fork: () -> Integer
+  end
+end

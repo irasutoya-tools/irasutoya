@@ -5,9 +5,6 @@ module Irasutoya
       MAX_HTML_BYTES: Integer
       REDIRECT_CODES: Array[String]
 
-      class FetchDeadlineExceeded < StandardError
-      end
-
       def self.included: (Class) -> void
 
       module Methods
@@ -21,70 +18,20 @@ module Irasutoya
       class HttpDocument
         TRUSTED_HOST: String
         MAX_REDIRECTS: Integer
-        @session: HttpSessionPool
 
         def open: [Result] (untyped) { (untyped) -> Result } -> Result
-        def initialize: (HttpSessionPool) -> void
-        def close_inherited_connections: () -> void
 
         private
 
         def fetch_page: [Result] (untyped, Integer) { (untyped) -> Result } -> Result
+        def request: (untyped) -> untyped
+        def unread_redirect_body?: (untyped) -> bool
         def trusted_page_uri: (untyped) -> untyped
         def redirect: (untyped, untyped, untyped) -> untyped
         def response_document: (untyped, untyped) -> untyped
       end
 
-      class HttpSessionPool
-        type origin = [Integer, String, String, Integer, String?]
-
-        MAX_CONNECTIONS_PER_ORIGIN: Integer
-        @max_connections: Integer
-        @lock: Mutex
-        @available: ConditionVariable
-        @sessions: Hash[origin, Hash[HttpSession, bool]]
-
-        def get: (untyped) -> untyped
-        def initialize: (?max_connections: Integer) -> void
-        def close_inherited_connections: () -> void
-
-        private
-
-        def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
-        def acquire_session: (origin) -> HttpSession
-        def new_session: (origin) -> HttpSession
-        def wait_for_session: () -> void
-        def release_session: (origin, HttpSession) -> void
-        def remove_idle_session: (origin, HttpSession) -> bool
-      end
-
-      class HttpSession
-        IDLE_TIMEOUT: Float
-        @lock: Mutex
-        @on_idle: ^(HttpSession) -> bool
-        @http: untyped
-        @idle_since: Float
-
-        def get: (untyped, untyped) -> untyped
-        def initialize: () { (HttpSession) -> bool } -> void
-        def close_inherited_connection: () -> void
-
-        private
-
-        def request: (untyped, String) -> untyped
-        def unread_redirect_body?: (untyped) -> bool
-        def session_for: (untyped, untyped) -> untyped
-        def build_http: (untyped, URI::HTTP?) -> Net::HTTP
-        def close_when_idle: () -> void
-        def remaining_idle_time: () -> Float
-        def monotonic_time: () -> Float
-      end
-
       HTTP_DOCUMENT: HttpDocument
-
-      module ForkCleanup
-        def _fork: () -> Integer
-      end
     end
   end
 end

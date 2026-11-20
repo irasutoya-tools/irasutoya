@@ -4,7 +4,11 @@ module Irasutoya
       def self.included: (Class) -> void
 
       module Methods
-        def parse_list_page: (document: untyped) -> Array[{ title: String, show_url: String }]
+        def parse_list_page: (document: untyped) -> Array[{ title: String, show_url: String, thumbnail_url: String? }]
+      end
+
+      module PrivateMethods
+        def self.thumbnail_url_from: (box: untyped) -> String?
       end
     end
   end

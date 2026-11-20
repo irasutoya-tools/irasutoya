@@ -11,23 +11,10 @@ module Irasutoya
     end
 
     def self.each_list_link(url, fetch:, parse:, &)
-      while url
-        document = fetch.call(url)
-        break unless document
-
-        page_url = effective_url(document, url)
+      each_list_page(url, fetch) do |document, page_url|
         list_links(document, page_url, parse).each(&)
-        url = next_list_url(document, page_url)
       end
     end
-
-    def self.list_links(document, page_url, parse)
-      parse.call(document: document).map do |parsed|
-        href = parsed.fetch(:show_url)
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href))
-      end
-    end
-    private_class_method :list_links
 
     def self.load_detail(url, fetch:, parse:)
       document = fetch.call(url)
@@ -49,25 +36,46 @@ module Irasutoya
     end
     private_class_method :parse_detail
 
-    def self.fetch_list_page(url, page, fetch)
-      document = fetch.call(url)
-      page.times do
-        next_url = next_list_url(document, effective_url(document, url))
-        return nil unless next_url
+    def self.list_links(document, page_url, parse)
+      parse.call(document: document).map do |parsed|
+        href = parsed.fetch(:show_url)
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
+                        thumbnail_url: parsed[:thumbnail_url])
+      end
+    end
+    private_class_method :list_links
 
-        url = next_url
-        document = fetch.call(url)
+    def self.fetch_list_page(url, page, fetch)
+      each_list_page(url, fetch) do |document, page_url|
+        return [document, page_url] if page <= 0
+
+        page -= 1
       end
 
-      [document, effective_url(document, url)] if document
+      nil
     end
     private_class_method :fetch_list_page
 
-    def self.next_list_url(document, page_url)
+    def self.each_list_page(url, fetch)
+      visited = Set.new
+      while url && visited.add?(url)
+        document = fetch.call(url)
+        break unless document
+
+        page_url = effective_url(document, url)
+        break if page_url != url && !visited.add?(page_url)
+
+        yield document, page_url
+        url = older_page_url(document, page_url)
+      end
+    end
+    private_class_method :each_list_page
+
+    def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
       URI.join(page_url, href).to_s unless href.nil? || href.empty?
     end
-    private_class_method :next_list_url
+    private_class_method :older_page_url
 
     def self.effective_url(document, requested_url)
       page_url = document.url if document.respond_to?(:url)
