@@ -13,17 +13,28 @@ module Irasutoya
     end
 
     class << self
-      def all # rubocop:disable Metrics/AbcSize
+      def all
         fetch_page_and_parse('https://www.irasutoya.com')
           .css('#sidebar-wrapper')
           .css('.widget')
           .select { |w| w.search('h2').text == '詳細カテゴリー' }
           .first
           .css('a')
-          .map { |a| a.attribute('href').value }
+          .filter_map { |a| a['href'] }
           .uniq
-          .select { |href| href.include?('label') }
-          .map { |href| Category.new(title: CGI.unescape(href.split('/')[5]), list_url: href) }
+          .filter_map { |href| category_from_url(href) }
+      end
+
+      private
+
+      def category_from_url(href)
+        path = URI.parse(href).path
+        label = path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
+        return unless label
+
+        new(title: URI.decode_uri_component(label), list_url: href)
+      rescue URI::InvalidURIError
+        nil
       end
     end
 

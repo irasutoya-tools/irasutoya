@@ -123,6 +123,27 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(described_class.random.url).to eq(show_url)
     end
 
+    context 'with a multiline JSONP feed' do
+      let(:feed_count) { 1 }
+      let(:feed_body) do
+        <<~JSONP
+          gdata.io.handleScriptLoaded({
+            "feed": {
+              "openSearch$totalResults": { "$t": "1" },
+              "entry": [{ "link": [{ "rel": "alternate", "href": "#{show_url}" }] }]
+            }
+          });
+        JSONP
+      end
+
+      it 'returns an illustration from the feed' do
+        expect(described_class.random).to have_attributes(
+          url: show_url,
+          title: '太った少年のイラスト（肥満）'
+        )
+      end
+    end
+
     it 'makes one feed request and one detail request with a fresh count' do
       allow(Random).to receive(:rand).with(feed_count).and_return(0, 1)
       expect(page_http).to receive(:request_get).with(feed_path(1)).once

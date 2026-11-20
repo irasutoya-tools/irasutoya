@@ -5,13 +5,15 @@ module Irasutoya
   class HttpSessionPool
     type origin = [Integer, String, String, Integer, String?]
 
+    MAX_CONNECTIONS_PER_ORIGIN: Integer
+    @max_connections: Integer
     @lock: Mutex
-    @sessions: Hash[origin, HttpSession]
-    @users: Hash[origin, Integer]
+    @available: ConditionVariable
+    @sessions: Hash[origin, Hash[HttpSession, bool]]
 
     def request: (URI::HTTP) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
     def read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
-    def initialize: () -> void
+    def initialize: (?max_connections: Integer) -> void
     def close_inherited_connections: () -> void
 
     private
@@ -19,18 +21,21 @@ module Irasutoya
     def abort_download: (Net::HTTP, Integer) -> bot
     def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
     def acquire_session: (origin) -> HttpSession
-    def remove_idle_session: (origin) -> bool
+    def new_session: (origin) -> HttpSession
+    def wait_for_session: () -> void
+    def release_session: (origin, HttpSession) -> void
+    def remove_idle_session: (origin, HttpSession) -> bool
   end
 
   class HttpSession
     IDLE_TIMEOUT: Float
     @lock: Mutex
-    @on_idle: ^() -> bool
+    @on_idle: ^(HttpSession) -> bool
     @http: untyped
     @idle_since: Float
 
     def request: (URI::HTTP, URI::Generic?) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
-    def initialize: () { () -> bool } -> void
+    def initialize: () { (HttpSession) -> bool } -> void
     def close_inherited_connection: () -> void
 
     private

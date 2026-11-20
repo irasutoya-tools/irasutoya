@@ -12,21 +12,27 @@ RSpec.describe 'Illustration HTTP connections' do
   let(:requests) { Queue.new }
   let(:disconnections) { Queue.new }
 
+  let(:release_body) { Queue.new }
+  let(:withheld_bodies) { Queue.new }
+
   around do |example|
     server_socket = acceptor
+    connections = []
     server = Thread.new do
       loop do
-        server_socket.accept.tap do |socket|
-          serve(socket)
-          disconnections << socket
+        socket = server_socket.accept
+        connections << Thread.new(socket) do |client|
+          serve(client)
         ensure
-          socket.close
+          client.close
+          disconnections << client
         end
       end
     end
     Timeout.timeout(10) { example.run }
   ensure
     server&.kill&.join
+    connections&.each { |connection| connection.kill.join }
     listener.close
   end
 
@@ -164,6 +170,44 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(requests.pop).to equal(requests.pop)
   end
 
+  it 'parses a fast detail while an earlier detail is waiting for its body' do
+    slow_fetch = Thread.new { fetch_detail('/slow/body') }
+    slow_socket = withheld_bodies.pop
+
+    expect(fetch_detail('/fast').title).to eq('/fast')
+    expect(requests.pop).to equal(slow_socket)
+    expect(requests.pop).not_to equal(slow_socket)
+    expect(slow_fetch).to be_alive
+
+    release_body << true
+    expect(slow_fetch.value.title).to eq('/slow/body')
+  ensure
+    slow_fetch&.kill&.join
+  end
+
+  it 'counts time waiting at the connection limit toward the fetch deadline' do
+    fetcher = Irasutoya::Modules::HasDocumentFetcher
+    pool = Irasutoya.const_get(:HttpSessionPool).new(max_connections: 2)
+    stub_const('Irasutoya::HTTP_TRANSPORT', pool)
+
+    holders = %w[/slow/body/one /slow/body/two].map { |path| Thread.new { fetch_detail(path) } }
+    held_sockets = Array.new(2) { withheld_bodies.pop }
+    expect(held_sockets.uniq.size).to eq(2)
+    expect(Array.new(2) { requests.pop }).to match_array(held_sockets)
+
+    stub_const("#{fetcher}::FETCH_TIMEOUT", 0.2)
+    expect { fetch_detail('/timed-out') }.to raise_error(Timeout::Error)
+    expect(requests).to be_empty
+
+    release_body << true << true
+    expect(holders.map { |holder| holder.value.title }).to eq(%w[/slow/body/one /slow/body/two])
+
+    expect(fetch_detail('/after-timeout').title).to eq('/after-timeout')
+    expect(held_sockets).to include(requests.pop)
+  ensure
+    holders&.each { |holder| holder.kill.join }
+  end
+
   it 'closes an unfinished redirect response and fetches the destination' do
     allow(self).to receive(:response_for).with('/unfinished').and_return(unfinished_redirect('/destination'))
     allow(self).to receive(:response_for).with('/destination').and_call_original
@@ -248,7 +292,16 @@ RSpec.describe 'Illustration HTTP connections' do
       path = request.split.fetch(1)
       nil until ["\r\n", nil].include?(socket.gets)
       requests << socket
-      socket.write(response_for(path))
+      response = response_for(path)
+      if path.start_with?('/slow/body')
+        headers, body = response.split("\r\n\r\n", 2)
+        socket.write(headers, "\r\n\r\n")
+        withheld_bodies << socket
+        release_body.pop
+        socket.write(body)
+      else
+        socket.write(response)
+      end
       break if path == '/truncated'
     end
   end
