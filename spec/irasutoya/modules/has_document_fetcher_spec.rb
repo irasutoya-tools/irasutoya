@@ -30,6 +30,23 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
     end
   end
 
+  it 'reports only the scheme of an unsupported proxy configured with credentials' do
+    proxy = URI('socks5://proxy-user:proxy-password@proxy.example:1080')
+    allow_any_instance_of(URI::HTTPS).to receive(:find_proxy).and_return(proxy)
+
+    expect { fetch_page(page_url) }.to raise_error(RuntimeError, 'Unsupported proxy scheme: socks5')
+  end
+
+  it 'fetches pages through an HTTP proxy with credentials' do
+    proxy = URI('http://proxy-user:proxy-password@proxy.example:8080')
+    allow_any_instance_of(URI::HTTPS).to receive(:find_proxy).and_return(proxy)
+    http = stub_page('show.html')
+    expect(Net::HTTP).to receive(:new)
+      .with('www.irasutoya.com', 443, 'proxy.example', 8080, 'proxy-user', 'proxy-password').and_return(http)
+
+    expect(fetch_page(page_url)).to be_a(Nokogiri::HTML::Document)
+  end
+
   it 'parses the buffered response directly using the response URL and charset' do
     stub_page('show.html')
     expect(Nokogiri::HTML).to receive(:parse).with(an_instance_of(StringIO), page_url, 'utf-8').and_call_original
