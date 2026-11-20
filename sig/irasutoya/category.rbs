@@ -10,5 +10,7 @@ module Irasutoya
     def initialize: (title: String, list_url: String) -> void
     def self.all: -> Array[Category]
     def fetch_irasuto_links: -> Array[IrasutoLink]
+
+    private def self.category_from_url: (String) -> Category?
   end
 end
