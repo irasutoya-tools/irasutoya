@@ -34,8 +34,20 @@ module Irasutoya
               source = img[:src]&.strip
               next if source.nil? || source.empty?
 
-              source.match?(/\A[a-z][a-z0-9+.-]*:/i) ? source : URI.join(url, source).to_s
+              resolve_image_url(source, url)
             end
+          end
+
+          private
+
+          def resolve_image_url(source, page_url)
+            reference = URI.parse(source)
+            resolved = reference.absolute? ? reference : URI.join(page_url, reference)
+            return unless resolved.is_a?(URI::HTTP) && !resolved.host.to_s.empty?
+
+            reference.absolute? ? source : resolved.to_s
+          rescue URI::Error
+            nil
           end
         end
       end
