@@ -7,7 +7,8 @@ module Irasutoya
 
     attr_reader title: String
     attr_reader show_url: String
-    def initialize: (title: String, show_url: String) -> void
+    attr_reader thumbnail_url: String?
+    def initialize: (title: String, show_url: String, ?thumbnail_url: String?) -> void
     def fetch_irasuto: -> Irasuto
   end
 end

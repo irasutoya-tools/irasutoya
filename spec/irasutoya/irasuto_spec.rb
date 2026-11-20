@@ -320,7 +320,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     let(:search_url) { 'https://www.irasutoya.com/search?q=%E6%A4%9C%E7%B4%A2' }
     let(:results) { described_class.search(query: query) }
 
-    let(:page_http) { stub_page('list.html') }
+    let(:listing_fixture) { 'list.html' }
+    let(:page_http) { stub_page(listing_fixture) }
 
     before { page_http }
 
@@ -332,19 +333,36 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         boxes = document.css('.box')
         expect(boxes.size).to eq(20)
         allow(document).to receive(:css).with('.box').and_return(boxes)
-        boxes.each { |box| expect(box).to receive(:css).with('a').once.and_call_original }
+        boxes.each do |box|
+          allow(box).to receive(:css).and_call_original
+          expect(box).to receive(:css).with('a').once.and_call_original
+        end
         document
       end
 
       results
     end
 
-    it 'loads links from the initial search URL with their detail URLs' do
+    it 'loads links from the initial search URL with their detail and thumbnail URLs' do
       link = results.first
 
       expect(page_http).to have_received(:request_get).with(URI.parse(search_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
+      expect(link.thumbnail_url).to eq(
+        'https://1.bp.blogspot.com/-f_bCUFp3lLk/XTKbbODDyQI/AAAAAAABTsY/F65tRwRy-qcIkc8M8HRij85HieUDMMCngCLcBGAs/s72-c/text_company_shigoto_hajime_osame.jpg'
+      )
+    end
+
+    context 'when the listing has missing or unusable thumbnails' do
+      let(:listing_fixture) { 'list_without_thumbnails.html' }
+
+      it 'keeps every card in the results' do
+        links = Irasutoya::Irasuto.search(query: query)
+
+        expect(links.map(&:title)).to eq(['Missing thumbnail', 'Empty thumbnail', 'Invalid thumbnail'])
+        expect(links.map(&:thumbnail_url)).to eq([nil, nil, nil])
+      end
     end
   end
 end

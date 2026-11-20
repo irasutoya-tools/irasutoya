@@ -12,7 +12,7 @@ Load the gem with `require 'irasutoya'`. The classes below are in the `Irasutoya
 | `Category.all` | Array of `Category` | Reads the site's category list. |
 | `category.fetch_irasuto_links` | Array of `IrasutoLink` | Loads the first listing page for a category. Each category exposes `title` and `list_url`. |
 
-An `IrasutoLink` exposes `title` and `show_url`. Call `link.fetch_irasuto` to load its detail page and get an `Irasuto`.
+An `IrasutoLink` exposes `title`, `show_url`, and `thumbnail_url`. The thumbnail URL preserves the size specified in the listing and is `nil` when the card has no usable thumbnail. Call `link.fetch_irasuto` to load its detail page and get an `Irasuto`.
 
 ## Read illustration details
 

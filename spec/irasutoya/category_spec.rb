@@ -60,12 +60,15 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
 
     include_examples 'ordered list results'
 
-    it 'loads links from the category URL with their detail URLs' do
+    it 'loads detail and thumbnail URLs from the category listing' do
       link = results.first
 
       expect(page_http).to have_received(:request_get).with(URI.parse(list_url).request_uri).once
       expect(link).to be_a(Irasutoya::IrasutoLink)
       expect(link.show_url).to eq('https://www.irasutoya.com/2019/08/blog-post_81.html')
+      expect(link.thumbnail_url).to eq(
+        'https://1.bp.blogspot.com/-f_bCUFp3lLk/XTKbbODDyQI/AAAAAAABTsY/F65tRwRy-qcIkc8M8HRij85HieUDMMCngCLcBGAs/s72-c/text_company_shigoto_hajime_osame.jpg'
+      )
     end
   end
 

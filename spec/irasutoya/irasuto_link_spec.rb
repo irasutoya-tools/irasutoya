@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
+  it 'defaults the thumbnail URL to nil for manually constructed links' do
+    link = described_class.new(title: 'Irasuto', show_url: 'https://example.com')
+
+    expect(link.thumbnail_url).to be_nil
+  end
+
   describe '#fetch_irasuto' do # rubocop:disable Metrics/BlockLength
     let(:irasuto_link) { Irasutoya::IrasutoLink.new(title: 'Irasuto', show_url: 'https://www.irasutoya.com/2014/03/blog-post_5924.html') }
 

@@ -80,9 +80,15 @@ irasuto_links = category.fetch_irasuto_links #=> returns array of IrasutoLink in
 irasuto_link = irasuto_links.first
 irasuto_link.title
 irasuto_link.show_url
+irasuto_link.thumbnail_url
 
 irasuto = irasuto_link.fetch_irasuto #=> returns Irasuto instance
 ```
+
+Search and category results expose the thumbnail URL embedded in each listing
+card. The URL keeps the size specified in the source and can be used for a
+preview without fetching the detail page. Cards without a usable thumbnail
+return `nil` from `thumbnail_url`.
 
 ### Open a saved or shared post URL
 

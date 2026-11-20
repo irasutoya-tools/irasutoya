@@ -11,6 +11,7 @@ RSpec.describe Irasutoya::Irasuto do
   let(:next_uri) { URI.parse(next_url) }
   let(:first_results) { (1..7).map { |index| "/2018/09/cat-#{index}.html" } }
   let(:next_results) { %w[/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html] }
+  let(:thumbnail_url) { 'https://1.bp.blogspot.com/example/s72-c/cat.png' }
 
   before do
     next_link = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(next_href)}">Next</a>)
@@ -25,10 +26,13 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
-  it 'follows the advertised cursor to the second page' do
-    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(%w[
+  it 'follows the advertised cursor and returns links with thumbnails from the second page' do
+    links = described_class.search(query: query, page: 1)
+
+    expect(links.map(&:show_url)).to eq(%w[
       https://www.irasutoya.com/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html
     ])
+    expect(links.map(&:thumbnail_url)).to eq([thumbnail_url, thumbnail_url])
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
@@ -81,7 +85,14 @@ RSpec.describe Irasutoya::Irasuto do
 
   def stub_search_page(uri, paths, pager = '')
     results = paths.map do |path|
-      %(<div class="box"><a href="#{path}">Image</a><a href="#{path}">Cat</a></div>)
+      <<~HTML
+        <div class="box">
+          <div class="boxim">
+            <a href="#{path}"><script>document.write(bp_thumbnail_resize("#{thumbnail_url}", 72));</script></a>
+          </div>
+          <a href="#{path}">Cat</a>
+        </div>
+      HTML
     end
     stub_html(uri, "<html><body>#{results.join}#{pager}</body></html>")
   end

@@ -9,7 +9,8 @@ module Irasutoya
       document, page_url = listing
       parse.call(document: document).map do |parsed|
         href = parsed.fetch(:show_url)
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href))
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
+                        thumbnail_url: parsed[:thumbnail_url])
       end
     end
 

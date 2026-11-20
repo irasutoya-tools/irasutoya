@@ -11,7 +11,8 @@ RSpec.describe 'Page loading overrides' do
                                                   .and_return([{ title: 'Custom link', show_url: detail_url }])
 
       expect(links).to contain_exactly(
-        an_instance_of(Irasutoya::IrasutoLink).and(have_attributes(title: 'Custom link', show_url: detail_url))
+        an_instance_of(Irasutoya::IrasutoLink).and(have_attributes(title: 'Custom link', show_url: detail_url,
+                                                               thumbnail_url: nil))
       )
     end
   end

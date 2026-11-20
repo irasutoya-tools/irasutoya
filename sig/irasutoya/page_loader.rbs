@@ -3,7 +3,7 @@ module Irasutoya
     def self.load_list: (
       String,
       fetch: ^(String) -> untyped,
-      parse: ^(document: untyped) -> Array[{ title: String, show_url: String }],
+      parse: ^(document: untyped) -> Array[{ title: String, show_url: String, ?thumbnail_url: String? }],
       ?page: Integer
     ) -> Array[IrasutoLink]
 
