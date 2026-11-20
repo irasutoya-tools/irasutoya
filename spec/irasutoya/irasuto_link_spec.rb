@@ -38,7 +38,7 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
 
       let(:page_http) { stub_page('show_relative_images.html') }
 
-      it 'skips missing and blank sources and exposes resolved URLs in document order' do
+      it 'exposes only valid HTTP and HTTPS images in document order' do
         irasuto = irasuto_link.fetch_irasuto
         expect(irasuto.image_urls).to eq(%w[
           https://www.irasutoya.com/images/root.png
