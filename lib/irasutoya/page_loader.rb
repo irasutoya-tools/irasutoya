@@ -35,18 +35,26 @@ module Irasutoya
     private_class_method :parse_detail
 
     def self.fetch_list_page(url, page, fetch)
+      visited = Set[url]
       document = fetch.call(url)
       page.times do
-        next_href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
-        return nil if next_href.nil? || next_href.empty?
+        page_url = effective_url(document, url)
+        visited.add(page_url)
+        url = older_page_url(document, page_url)
+        return nil unless url && visited.add?(url)
 
-        url = URI.join(effective_url(document, url), next_href).to_s
         document = fetch.call(url)
       end
 
       [document, effective_url(document, url)] if document
     end
     private_class_method :fetch_list_page
+
+    def self.older_page_url(document, page_url)
+      href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
+      URI.join(page_url, href).to_s unless href.nil? || href.empty?
+    end
+    private_class_method :older_page_url
 
     def self.effective_url(document, requested_url)
       page_url = document.url if document.respond_to?(:url)

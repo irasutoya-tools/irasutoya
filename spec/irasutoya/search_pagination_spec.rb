@@ -14,8 +14,7 @@ RSpec.describe Irasutoya::Irasuto do
   let(:thumbnail_url) { 'https://1.bp.blogspot.com/example/s72-c/cat.png' }
 
   before do
-    next_link = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(next_href)}">Next</a>)
-    stub_search_page(first_page_uri, first_results, next_link)
+    stub_search_page(first_page_uri, first_results, next_href)
     stub_search_page(next_uri, next_results)
   end
 
@@ -60,6 +59,35 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  it 'returns no results after one fetch when the older link points to itself' do
+    stub_search_page(search_uri, first_results, search_uri.request_uri)
+
+    expect(described_class.search(query: query, page: 100)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+  end
+
+  it 'returns no results after two fetches when older links form a cycle' do
+    stub_search_page(next_uri, next_results, search_url)
+
+    expect(described_class.search(query: query, page: 100)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'does not refetch the redirected page when its relative older link points to itself' do
+    redirected_uri = URI.join(search_url, '/archive/results?q=cat')
+    redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+    redirect['Location'] = redirected_uri.to_s
+    redirect['Content-Length'] = '0'
+    allow(redirect).to receive(:read_body)
+    allow(page_http).to receive(:request_get).with(search_uri.request_uri).and_yield(redirect).and_return(redirect)
+    stub_search_page(redirected_uri, first_results, 'results?q=cat')
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(redirected_uri.request_uri).once
+  end
+
   context 'when the search redirects to another directory' do
     let(:first_page_uri) { URI.join(search_url, '/archive/cats/index.html') }
     let(:next_href) { 'older.html' }
@@ -83,7 +111,7 @@ RSpec.describe Irasutoya::Irasuto do
     end
   end
 
-  def stub_search_page(uri, paths, pager = '')
+  def stub_search_page(uri, paths, older_href = nil)
     results = paths.map do |path|
       <<~HTML
         <div class="box">
@@ -94,6 +122,7 @@ RSpec.describe Irasutoya::Irasuto do
         </div>
       HTML
     end
+    pager = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(older_href)}">Next</a>) if older_href
     stub_html(uri, "<html><body>#{results.join}#{pager}</body></html>")
   end
 

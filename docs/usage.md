@@ -6,7 +6,7 @@ Load the gem with `require 'irasutoya'`. The classes below are in the `Irasutoya
 
 | Method | Returns | Behavior |
 | --- | --- | --- |
-| `Irasuto.search(query:, page: 0)` | Array of `IrasutoLink` | Searches for a string query. `page: 0` is the first page. Each additional page follows one older-results link. If the requested page is beyond the last page, the result is an empty array. |
+| `Irasuto.search(query:, page: 0)` | Array of `IrasutoLink` | Searches for a string query. `page: 0` is the first page. Each additional page follows one older-results link. If the requested page is beyond the last page or an older-results link points to a page already fetched in this search, the result is an empty array. |
 | `Irasuto.random` | `Irasuto` | Chooses an entry from the posts feed and loads its detail page. |
 | `Irasuto.from_url(url)` | `Irasuto` | Loads an illustration directly from a post URL. |
 | `Category.all` | Array of `Category` | Reads the site's category list. |
