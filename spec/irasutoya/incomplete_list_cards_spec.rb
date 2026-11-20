@@ -2,7 +2,10 @@
 
 RSpec.describe 'Listings with incomplete result cards' do
   let(:expected) do
-    [['Mouse', 'https://www.irasutoya.com/2018/09/mouse.html'], ['Bird', 'https://www.irasutoya.com/2018/09/bird.html']]
+    [
+      ['Mouse', 'https://www.irasutoya.com/2018/09/mouse.html'],
+      ['Bird', 'https://www.irasutoya.com/2018/09/bird.html']
+    ]
   end
 
   before { stub_page('list_with_incomplete_cards.html') }
