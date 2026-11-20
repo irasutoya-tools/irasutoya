@@ -8,6 +8,7 @@ module Irasutoya
     module HasDocumentFetcher
       FETCH_TIMEOUT = 10
       MAX_HTML_BYTES = 4 * 1024 * 1024
+      REDIRECT_CODES = %w[301 302 303 307 308].freeze
 
       def self.included(klass)
         super
@@ -16,9 +17,11 @@ module Irasutoya
       end
 
       module Methods
-        def fetch_page_and_parse(url)
+        def fetch_page_and_parse(url, uri: nil)
           with_fetch_timeout do
-            HTTP_DOCUMENT.open(URI.parse(url)) { |page| Nokogiri::HTML.parse(page, nil, page.charset) }
+            HTTP_DOCUMENT.open(uri || URI.parse(url)) do |page|
+              Nokogiri::HTML.parse(page, page.base_uri.to_s, page.charset)
+            end
           end
         end
 
@@ -33,7 +36,6 @@ module Irasutoya
 
       class HttpDocument
         TRUSTED_HOST = 'www.irasutoya.com'
-        REDIRECT_CODES = %w[301 302 303 307 308].freeze
         MAX_REDIRECTS = 10
 
         def open(uri, &)
@@ -43,9 +45,7 @@ module Irasutoya
         private
 
         def fetch_page(uri, redirects_left, &)
-          response = HTTP_TRANSPORT.request(uri) do |http, reply|
-            reply.body = HTTP_TRANSPORT.read_body(http, reply, MAX_HTML_BYTES)
-          end
+          response = request(uri)
           document = response_document(uri, response)
           return yield document if response.is_a?(Net::HTTPSuccess)
 
@@ -54,6 +54,19 @@ module Irasutoya
           raise IOError, 'Too many Irasutoya page redirects' if redirects_left.zero?
 
           fetch_page(trusted_page_uri(target), redirects_left - 1, &)
+        end
+
+        def request(uri)
+          HTTP_TRANSPORT.request(uri) do |http, reply|
+            return reply if unread_redirect_body?(reply)
+
+            reply.body = HTTP_TRANSPORT.read_body(http, reply, MAX_HTML_BYTES)
+          end
+        end
+
+        def unread_redirect_body?(response)
+          REDIRECT_CODES.include?(response.code) &&
+            (response['content-length'] != '0' || response.key?('transfer-encoding'))
         end
 
         def trusted_page_uri(uri)
@@ -78,7 +91,7 @@ module Irasutoya
 
         def response_document(uri, response)
           # @type var document: untyped
-          document = StringIO.new(response.body.to_s)
+          document = StringIO.new(REDIRECT_CODES.include?(response.code) ? '' : response.body.to_s)
           document.tap do
             OpenURI::Meta.init(document)
             document.base_uri = uri

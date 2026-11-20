@@ -3,11 +3,12 @@ module Irasutoya
     module HasDocumentFetcher
       FETCH_TIMEOUT: Integer
       MAX_HTML_BYTES: Integer
+      REDIRECT_CODES: Array[String]
 
       def self.included: (Class) -> void
 
       module Methods
-        def fetch_page_and_parse: (String) -> untyped
+        def fetch_page_and_parse: (String, ?uri: URI::Generic?) -> untyped
 
         private
 
@@ -16,7 +17,6 @@ module Irasutoya
 
       class HttpDocument
         TRUSTED_HOST: String
-        REDIRECT_CODES: Array[String]
         MAX_REDIRECTS: Integer
 
         def open: [Result] (untyped) { (untyped) -> Result } -> Result
@@ -24,6 +24,8 @@ module Irasutoya
         private
 
         def fetch_page: [Result] (untyped, Integer) { (untyped) -> Result } -> Result
+        def request: (untyped) -> untyped
+        def unread_redirect_body?: (untyped) -> bool
         def trusted_page_uri: (untyped) -> untyped
         def redirect: (untyped, untyped, untyped) -> untyped
         def response_document: (untyped, untyped) -> untyped

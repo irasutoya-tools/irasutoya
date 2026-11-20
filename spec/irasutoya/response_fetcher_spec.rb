@@ -5,6 +5,12 @@ require 'timeout'
 require 'zlib'
 
 RSpec.describe Irasutoya::ResponseFetcher do
+  it 'rejects a response that ends before its declared length' do
+    with_response('Content-Length: 100', 'partial', close_after_write: true) do |url|
+      expect { described_class.get(url, max_bytes: 100) }.to raise_error(EOFError)
+    end
+  end
+
   it 'accepts a multibyte response at the byte limit' do
     body = '日本語'
     with_response("Content-Length: #{body.bytesize}", body) do |url|
@@ -44,19 +50,21 @@ RSpec.describe Irasutoya::ResponseFetcher do
     end
   end
 
-  def with_response(headers, body, status: '200 OK')
+  def with_response(headers, body, status: '200 OK', close_after_write: false)
     TCPServer.open('127.0.0.1', 0) do |server|
       worker = Thread.new do
-        socket = server.accept
-        socket.gets("\r\n\r\n")
-        socket.write("HTTP/1.1 #{status}\r\nConnection: close\r\n#{headers}\r\n\r\n", body)
-        socket.read
-      ensure
-        socket&.close
+        loop do
+          socket = server.accept
+          socket.gets("\r\n\r\n")
+          socket.write("HTTP/1.1 #{status}\r\nConnection: close\r\n#{headers}\r\n\r\n", body)
+          break socket.read unless close_after_write
+        ensure
+          socket&.close
+        end
       end
       Timeout.timeout(5) do
         yield "http://127.0.0.1:#{server.addr[1]}/"
-        expect(worker.value).to eq('')
+        expect(worker.value).to eq('') unless close_after_write
       end
     ensure
       worker&.kill

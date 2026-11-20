@@ -11,12 +11,13 @@ module Irasutoya
 
       module Methods
         def parse_list_page(document:)
-          document.css('.box').map do |box|
+          document.css('.box').filter_map do |box|
             anchors = box.css('a')
-            {
-              title: anchors[1].text,
-              show_url: anchors.first.attribute('href').value
-            }
+            title = anchors[1]&.text
+            show_url = anchors.first&.[]('href')
+            next if title.to_s.strip.empty? || show_url.to_s.strip.empty?
+
+            { title: title, show_url: show_url }
           end
         end
       end

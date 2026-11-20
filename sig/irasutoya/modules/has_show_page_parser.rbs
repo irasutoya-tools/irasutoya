@@ -11,6 +11,7 @@ module Irasutoya
         def self.title_from: (document: untyped) -> String
         def self.description_from: (document: untyped) -> String
         def self.image_urls_from: (document: untyped, url: String) -> Array[String]
+        private def self.resolve_image_url: (String source, String page_url) -> String?
       end
     end
   end

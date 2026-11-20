@@ -35,6 +35,7 @@ RSpec.configure do |config|
   config.include PageFixtures
 
   config.before do
+    Irasutoya::Irasuto.instance_variable_set(:@feed_count_cache, nil)
     pool = Irasutoya.const_get(:HttpSessionPool).new
     stub_const('Irasutoya::HTTP_TRANSPORT', pool)
   end
