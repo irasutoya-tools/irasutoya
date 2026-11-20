@@ -10,6 +10,7 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
   def redirect_to(location)
     response = Net::HTTPFound.new('1.1', '302', 'Found')
     response['Location'] = location
+    response['Content-Length'] = '0'
     allow(response).to receive(:read_body)
     response
   end
