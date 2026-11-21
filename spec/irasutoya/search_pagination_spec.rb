@@ -37,7 +37,7 @@ RSpec.describe Irasutoya::Irasuto do
 
   it 'fetches the detail page from a root-relative search result' do
     detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-1.html')
-    stub_html(detail_uri, File.read('spec/files/show.html'))
+    stub_html(page_http, File.read('spec/files/show.html'), path: detail_uri.request_uri)
 
     expect(described_class.search(query: query).first.fetch_irasuto).to have_attributes(
       url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
@@ -47,7 +47,7 @@ RSpec.describe Irasutoya::Irasuto do
 
   it 'fetches the detail page from an absolute search result' do
     detail_uri = URI.parse('https://www.irasutoya.com/2018/09/cat-9.html')
-    stub_html(detail_uri, File.read('spec/files/show.html'))
+    stub_html(page_http, File.read('spec/files/show.html'), path: detail_uri.request_uri)
 
     expect(described_class.search(query: query, page: 1).last.fetch_irasuto).to have_attributes(
       url: detail_uri.to_s, title: '太った少年のイラスト（肥満）'
@@ -70,6 +70,45 @@ RSpec.describe Irasutoya::Irasuto do
     allow(page_http).to receive(:request_get).with(next_uri.request_uri).and_raise(URI::InvalidURIError)
 
     expect { described_class.search(query: query, page: 1) }.to raise_error(URI::InvalidURIError)
+  end
+
+  it 'yields the current page and stops enumeration when the older link is malformed' do
+    stub_search_page(search_uri, first_results, 'https://[bad]/search')
+    expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+    expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).once
+  end
+
+  it 'fetches nothing until enumeration starts and stops at a page boundary' do
+    results = described_class.each_search_result(query: query)
+
+    expect(results).to be_an(Enumerator)
+    expect(page_http).not_to have_received(:request_get)
+    expect(results.take(7)).to all(be_a(Irasutoya::IrasutoLink))
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
+  end
+
+  it 'enumerates results in order through the last page with one request per page' do
+    expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
+    links = described_class.each_search_result(query: query).to_a
+
+    expect(links.map(&:show_url)).to eq(expected_urls)
+    expect(links.map(&:thumbnail_url)).to eq([thumbnail_url] * expected_urls.size)
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'stops enumeration when older links form a cycle' do
+    stub_search_page(next_uri, next_results, search_url)
+    expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
+
+    results = described_class.each_search_result(query: query).take(expected_urls.size + 1)
+
+    expect(results.map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
   it 'returns no results after one fetch when the older link points to itself' do
@@ -101,6 +140,30 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(redirected_uri.request_uri).once
   end
 
+  context 'when the older page redirects to the first page' do
+    before do
+      redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+      redirect['Location'] = search_uri.request_uri
+      redirect['Content-Length'] = '0'
+      allow(redirect).to receive(:read_body)
+      allow(page_http).to receive(:request_get).with(next_uri.request_uri).and_yield(redirect).and_return(redirect)
+    end
+
+    it 'returns the redirected results for the requested page' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
+    end
+
+    it 'stops enumeration before yielding the redirected results again' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+      results = described_class.each_search_result(query: query).take(expected_urls.size + 1)
+
+      expect(results.map(&:show_url)).to eq(expected_urls)
+      expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+    end
+  end
+
   context 'when the search redirects to another directory' do
     let(:first_page_uri) { URI.join(search_url, '/archive/cats/index.html') }
     let(:next_href) { 'older.html' }
@@ -122,6 +185,16 @@ RSpec.describe Irasutoya::Irasuto do
       expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
       expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
     end
+
+    it 'resolves pagination and detail links from the effective URLs during enumeration' do
+      results = described_class.each_search_result(query: query).drop(first_results.size)
+
+      expect(results.map(&:show_url)).to eq(%w[
+        https://www.irasutoya.com/archive/cats/cat-8.html https://www.irasutoya.com/2018/09/cat-9.html
+      ])
+      expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
+      expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+    end
   end
 
   def stub_search_page(uri, paths, older_href = nil)
@@ -136,14 +209,6 @@ RSpec.describe Irasutoya::Irasuto do
       HTML
     end
     pager = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(older_href)}">Next</a>) if older_href
-    stub_html(uri, "<html><body>#{results.join}#{pager}</body></html>")
-  end
-
-  def stub_html(uri, html)
-    response = Net::HTTPOK.new('1.1', '200', 'OK')
-    response['Content-Type'] = 'text/html; charset=UTF-8'
-    allow(response).to receive(:body).and_return(html)
-    allow(response).to receive(:read_body).and_yield(html)
-    allow(page_http).to receive(:request_get).with(uri.request_uri).and_yield(response).and_return(response)
+    stub_html(page_http, "<html><body>#{results.join}#{pager}</body></html>", path: uri.request_uri)
   end
 end

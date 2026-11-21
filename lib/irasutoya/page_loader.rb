@@ -7,10 +7,12 @@ module Irasutoya
       return [] unless listing
 
       document, page_url = listing
-      parse.call(document: document).map do |parsed|
-        href = parsed.fetch(:show_url)
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
-                        thumbnail_url: parsed[:thumbnail_url])
+      list_links(document, page_url, parse)
+    end
+
+    def self.each_list_link(url, fetch:, parse:, &)
+      each_list_page(url, fetch) do |document, page_url|
+        list_links(document, page_url, parse).each(&)
       end
     end
 
@@ -34,6 +36,15 @@ module Irasutoya
     end
     private_class_method :parse_detail
 
+    def self.list_links(document, page_url, parse)
+      parse.call(document: document).map do |parsed|
+        href = parsed.fetch(:show_url)
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
+                        thumbnail_url: parsed[:thumbnail_url])
+      end
+    end
+    private_class_method :list_links
+
     def self.fetch_list_page(url, page, fetch)
       visited = Set[url]
       document = fetch.call(url)
@@ -49,6 +60,21 @@ module Irasutoya
       [document, effective_url(document, url)] if document
     end
     private_class_method :fetch_list_page
+
+    def self.each_list_page(url, fetch)
+      visited = Set.new
+      while url && visited.add?(url)
+        document = fetch.call(url)
+        break unless document
+
+        page_url = effective_url(document, url)
+        break if page_url != url && !visited.add?(page_url)
+
+        yield document, page_url
+        url = older_page_url(document, page_url)
+      end
+    end
+    private_class_method :each_list_page
 
     def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Irasutoya
-  class Irasuto
+  class Irasuto # rubocop:disable Metrics/ClassLength
     include Modules::HasDocumentFetcher
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
@@ -56,10 +56,9 @@ module Irasutoya
       end
 
       def search(query:, page: 0)
-        url = "https://www.irasutoya.com/search?q=#{CGI.escape query}"
         with_fetch_timeout do
           PageLoader.load_list(
-            url,
+            search_url(query),
             page: page,
             fetch: ->(page_url) { fetch_page_and_parse(page_url) },
             parse: ->(document:) { parse_list_page(document: document) }
@@ -67,7 +66,22 @@ module Irasutoya
         end
       end
 
+      def each_search_result(query:, &block)
+        return enum_for(:each_search_result, query: query) unless block
+
+        PageLoader.each_list_link(
+          search_url(query),
+          fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+          parse: ->(document:) { parse_list_page(document: document) },
+          &block
+        )
+      end
+
       private
+
+      def search_url(query)
+        "https://www.irasutoya.com/search?q=#{CGI.escape query}"
+      end
 
       def validate_input_url(url)
         URI.parse(url)
