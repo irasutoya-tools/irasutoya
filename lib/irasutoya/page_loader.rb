@@ -53,6 +53,8 @@ module Irasutoya
     def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
       URI.join(page_url, href).to_s unless href.nil? || href.empty?
+    rescue URI::Error
+      nil
     end
     private_class_method :older_page_url
 

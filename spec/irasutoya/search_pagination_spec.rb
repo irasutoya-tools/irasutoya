@@ -59,6 +59,19 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  it 'returns an empty array without another request when the older link is malformed' do
+    stub_search_page(search_uri, first_results, 'https://[bad]/search')
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).once
+  end
+
+  it 'propagates URI errors raised while fetching a valid older link' do
+    allow(page_http).to receive(:request_get).with(next_uri.request_uri).and_raise(URI::InvalidURIError)
+
+    expect { described_class.search(query: query, page: 1) }.to raise_error(URI::InvalidURIError)
+  end
+
   it 'returns no results after one fetch when the older link points to itself' do
     stub_search_page(search_uri, first_results, search_uri.request_uri)
 
