@@ -121,7 +121,7 @@ module Irasutoya
       def refresh_feed_count
         feed = fetch_feed(1)
         count = Integer(feed.dig('openSearch$totalResults', '$t'), 10)
-        @feed_count_cache = [count, feed_count_time + FEED_COUNT_TTL]
+        @feed_count_cache = count.positive? ? [count, feed_count_time + FEED_COUNT_TTL] : nil
         [count, feed]
       end
 
