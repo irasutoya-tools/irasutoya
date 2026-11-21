@@ -11,26 +11,21 @@ module Irasutoya
 
       module Methods
         def parse_show_page(document:, url: (document.url if document.respond_to?(:url)))
+          post = document.at_css('.post')
+          return { title: '', description: '', image_urls: [] } unless post
+
           {
-            title: PrivateMethods.title_from(document: document),
-            description: PrivateMethods.description_from(document: document),
-            image_urls: PrivateMethods.image_urls_from(document: document, url: url)
+            title: post.at_css('.title h2')&.text.to_s.strip,
+            description: post.css('.entry .separator').last&.text.to_s.strip,
+            image_urls: PrivateMethods.image_urls_from(post: post, url: url)
           }
         end
       end
 
       module PrivateMethods
         class << self
-          def title_from(document:)
-            document.css('.post').css('.title').search('h2').text.strip
-          end
-
-          def description_from(document:)
-            document.css('.entry .separator').last&.text&.strip || ''
-          end
-
-          def image_urls_from(document:, url:)
-            document.css('.entry').search('img').filter_map do |img|
+          def image_urls_from(post:, url:)
+            post.css('.entry img').filter_map do |img|
               source = img[:src]&.strip
               next if source.nil? || source.empty?
 
