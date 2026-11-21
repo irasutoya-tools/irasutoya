@@ -10,7 +10,7 @@ module Irasutoya
       end
 
       module Methods
-        def parse_show_page(document:, url:)
+        def parse_show_page(document:, url: (document.url if document.respond_to?(:url)))
           {
             title: PrivateMethods.title_from(document: document),
             description: PrivateMethods.description_from(document: document),
@@ -42,7 +42,7 @@ module Irasutoya
 
           def resolve_image_url(source, page_url)
             reference = URI.parse(source)
-            resolved = reference.absolute? ? reference : URI.join(page_url, reference)
+            resolved = reference.absolute? ? reference : URI.join(page_url.to_s, reference)
             return unless resolved.is_a?(URI::HTTP) && !resolved.host.to_s.empty?
             return if one_pixel_blogger_image?(resolved)
 
