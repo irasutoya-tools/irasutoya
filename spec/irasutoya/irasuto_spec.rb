@@ -242,6 +242,19 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no entries')
     end
 
+    it 'fetches the count again on the next lookup after an empty feed' do
+      empty_response = jsonp_response('callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});')
+      recovered_response = jsonp_response(feed_body.sub(feed_count.to_s, '1'))
+      expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
+                                   .and_yield(empty_response).and_return(empty_response)
+      expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
+                                   .and_yield(recovered_response).and_return(recovered_response)
+      expect(Random).to receive(:rand).with(1).ordered.and_return(0)
+
+      expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no entries')
+      expect(described_class.random.url).to eq(show_url)
+    end
+
     it 'rejects an oversized count feed before choosing a random index' do
       stub_const('Irasutoya::Irasuto::MAX_FEED_BYTES', feed_body.bytesize - 1)
       expect(Random).not_to receive(:rand)
