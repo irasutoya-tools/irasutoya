@@ -75,6 +75,19 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
 
       expect { described_class.from_url('https://www.irasutoya.com/post.html') }.to raise_error(URI::InvalidURIError)
     end
+
+    { 'missing' => nil, 'malformed' => '/invalid path' }.each do |condition, location|
+      it "reports a redirect with a #{condition} Location as an HTTP error" do
+        http = stub_page_http
+        response = Net::HTTPFound.new('1.1', '302', 'Found')
+        response['Location'] = location
+        allow(http).to receive(:request_get).with('/post.html').and_yield(response).and_return(response)
+
+        expect { described_class.from_url('https://www.irasutoya.com/post.html') }
+          .to raise_error(OpenURI::HTTPError, '302 Found (Invalid Location URI)')
+        expect(http).to have_received(:request_get).once
+      end
+    end
   end
 
   describe 'image accessors' do
