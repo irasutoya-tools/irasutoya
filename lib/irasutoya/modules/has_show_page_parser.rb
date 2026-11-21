@@ -44,10 +44,16 @@ module Irasutoya
             reference = URI.parse(source)
             resolved = reference.absolute? ? reference : URI.join(page_url, reference)
             return unless resolved.is_a?(URI::HTTP) && !resolved.host.to_s.empty?
+            return if one_pixel_blogger_image?(resolved)
 
             reference.absolute? ? source : resolved.to_s
           rescue URI::Error
             nil
+          end
+
+          def one_pixel_blogger_image?(url)
+            url.path.to_s.include?('/s1/') &&
+              url.host.to_s.match?(/\A(?:blogger\.googleusercontent\.com|\d+\.bp\.blogspot\.com)\z/i)
           end
         end
       end
