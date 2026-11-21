@@ -143,7 +143,7 @@ RSpec.describe 'Illustration HTTP connections' do
     proxy_url = origin.sub('://', '://proxy%2Buser:p%40ss:word+here@')
     allow(ENV).to receive(:[]).with('http_proxy').and_return(proxy_url)
     expect(Net::HTTP).to receive(:new)
-      .with('www.irasutoya.com', 443, '127.0.0.1', listener.addr[1], 'proxy+user', 'p@ss:word here')
+      .with('www.irasutoya.com', 443, '127.0.0.1', listener.addr[1], 'proxy+user', 'p@ss:word+here')
       .and_call_original
     allow(self).to receive(:response_for).and_return(http_response('502 Bad Gateway', ''))
 
