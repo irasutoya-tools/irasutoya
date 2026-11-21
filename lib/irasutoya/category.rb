@@ -14,26 +14,26 @@ module Irasutoya
 
     class << self
       def all
-        fetch_page_and_parse('https://www.irasutoya.com')
-          .css('#sidebar-wrapper')
-          .css('.widget')
-          .select { |w| w.search('h2').text == '詳細カテゴリー' }
-          .first
-          .css('a')
-          .filter_map { |a| a['href'] }
-          .uniq
-          .filter_map { |href| category_from_url(href) }
+        homepage_url = 'https://www.irasutoya.com'
+        document = fetch_page_and_parse(homepage_url)
+        page_url = PageLoader.effective_url(document, homepage_url)
+        category_hrefs(document).filter_map { |href| category_from_url(page_url, href) }
       end
 
       private
 
-      def category_from_url(href)
-        path = URI.parse(href).path
-        label = path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
+      def category_hrefs(document)
+        widget = document.css('#sidebar-wrapper .widget').find { |item| item.search('h2').text == '詳細カテゴリー' }
+        widget.css('a').filter_map { |anchor| anchor['href'] }.uniq
+      end
+
+      def category_from_url(page_url, href)
+        url = URI.join(page_url, href)
+        label = url.path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
         return unless label
 
-        new(title: URI.decode_uri_component(label), list_url: href)
-      rescue URI::InvalidURIError
+        new(title: URI.decode_uri_component(label), list_url: url.to_s)
+      rescue URI::Error
         nil
       end
     end

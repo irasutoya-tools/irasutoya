@@ -11,6 +11,7 @@ module Irasutoya
     def self.all: -> Array[Category]
     def fetch_irasuto_links: -> Array[IrasutoLink]
 
-    private def self.category_from_url: (String) -> Category?
+    private def self.category_hrefs: (untyped) -> Array[String]
+    private def self.category_from_url: (String, String) -> Category?
   end
 end
