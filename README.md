@@ -90,6 +90,19 @@ card. The URL keeps the size specified in the source and can be used for a
 preview without fetching the detail page. Cards without a usable thumbnail
 return `nil` from `thumbnail_url`.
 
+### Browse search and category results
+
+```ruby
+shortlist = Irasutoya::Irasuto.each_search_result(query: '猫').take(10)
+
+category = Irasutoya::Category.all.find { |entry| entry.title == '猫' }
+match = category&.each_irasuto_link&.find { |link| link.title.include?('黒猫') }
+```
+
+Both methods return an Enumerator when called without a block. They fetch listing pages
+as needed and yield `IrasutoLink` objects. Use `take` or `find` to stop early, and call
+`fetch_irasuto` on a chosen link to load its details.
+
 ### Open a saved or shared post URL
 
 Pass an absolute post URL on `www.irasutoya.com` to `Irasutoya::Irasuto.from_url`.

@@ -37,14 +37,20 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
     expect { fetch_page(page_url) }.to raise_error(RuntimeError, 'Unsupported proxy scheme: socks5')
   end
 
-  it 'fetches pages through an HTTP proxy with credentials' do
-    proxy = URI('http://proxy-user:proxy-password@proxy.example:8080')
-    allow_any_instance_of(URI::HTTPS).to receive(:find_proxy).and_return(proxy)
-    http = stub_page('show.html')
-    expect(Net::HTTP).to receive(:new)
-      .with('www.irasutoya.com', 443, 'proxy.example', 8080, 'proxy-user', 'proxy-password').and_return(http)
+  {
+    'a literal colon in the password' => ['alice:a:b', 'alice', 'a:b'],
+    'percent escapes in both credentials' => ['al%69ce:p%40ss', 'alice', 'p@ss'],
+    'literal plus signs in both credentials' => ['alice+proxy:p+ss', 'alice+proxy', 'p+ss']
+  }.each do |description, (userinfo, username, password)|
+    it "fetches pages through an HTTP proxy with #{description}" do
+      proxy = URI("http://#{userinfo}@proxy.example:8080")
+      allow_any_instance_of(URI::HTTPS).to receive(:find_proxy).and_return(proxy)
+      http = stub_page('show.html')
+      expect(Net::HTTP).to receive(:new)
+        .with('www.irasutoya.com', 443, 'proxy.example', 8080, username, password).and_return(http)
 
-    expect(fetch_page(page_url)).to be_a(Nokogiri::HTML::Document)
+      expect(fetch_page(page_url)).to be_a(Nokogiri::HTML::Document)
+    end
   end
 
   it 'parses the buffered response directly using the response URL and charset' do
