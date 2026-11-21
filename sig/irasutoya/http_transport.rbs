@@ -11,14 +11,14 @@ module Irasutoya
     @available: ConditionVariable
     @sessions: Hash[origin, Hash[HttpSession, bool]]
 
-    def request: (URI::HTTP, ?proxy_from_http_env: bool) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
+    def request: (URI::HTTP) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
     def read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
     def initialize: (?max_connections: Integer) -> void
     def close_inherited_connections: () -> void
 
     private
 
-    def proxy_lookup_uri: (URI::HTTP, bool) -> URI::HTTP
+    def find_proxy: (URI::HTTP) -> URI::Generic?
     def abort_download: (Net::HTTP, Integer) -> bot
     def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
     def acquire_session: (origin) -> HttpSession
