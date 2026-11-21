@@ -14,11 +14,13 @@ module Irasutoya
 
     class << self
       def all
-        fetch_page_and_parse('https://www.irasutoya.com')
-          .css('#sidebar-wrapper')
-          .css('.widget')
-          .select { |w| w.search('h2').text == '詳細カテゴリー' }
-          .first
+        widget = fetch_page_and_parse('https://www.irasutoya.com')
+                 .css('#sidebar-wrapper')
+                 .css('.widget')
+                 .find { |w| w.search('h2').text == '詳細カテゴリー' }
+        return [] unless widget
+
+        widget
           .css('a')
           .filter_map { |a| a['href'] }
           .uniq

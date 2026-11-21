@@ -38,6 +38,14 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe '.all without the category widget' do
+    before { stub_page('index_without_category_widget.html') }
+
+    it 'returns an empty array' do
+      expect(described_class.all).to eq([])
+    end
+  end
+
   describe '.all with sidebar links containing queries' do
     before { stub_page('index_category_links.html') }
 
