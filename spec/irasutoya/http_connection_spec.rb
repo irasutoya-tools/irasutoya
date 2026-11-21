@@ -45,7 +45,11 @@ RSpec.describe 'Illustration HTTP connections' do
       http
     end
     allow(ENV).to receive(:[]).and_call_original
-    %w[https_proxy HTTPS_PROXY].each { |name| allow(ENV).to receive(:[]).with(name).and_return(nil) }
+    %w[http_proxy HTTP_PROXY https_proxy HTTPS_PROXY no_proxy NO_PROXY CGI_HTTP_PROXY].each do |name|
+      allow(ENV).to receive(:[]).with(name).and_return(nil)
+    end
+    allow(IPSocket).to receive(:getaddress).and_call_original
+    allow(IPSocket).to receive(:getaddress).with('www.irasutoya.com').and_return('192.0.2.1')
   end
 
   context 'with a local HTTPS server' do
@@ -123,23 +127,29 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(requests.pop).not_to equal(original_socket)
   end
 
-  it 'uses https_proxy for an HTTPS detail request when http_proxy is unset' do
-    allow(ENV).to receive(:[]).and_call_original
-    %w[http_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY].each do |name|
-      allow(ENV).to receive(:[]).with(name).and_return(nil)
-    end
-    allow(ENV).to receive(:[]).with('https_proxy').and_return(origin)
-    expect(self).to receive(:response_for).with('www.irasutoya.com:443')
-                                         .and_return(http_response('502 Bad Gateway', ''))
+  %w[https_proxy http_proxy].each do |proxy_setting|
+    context "with only #{proxy_setting} configured" do
+      before { allow(ENV).to receive(:[]).with(proxy_setting).and_return(origin) }
 
-    expect { fetch_detail('/detail') }
-      .to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+      it 'uses the same proxy for feed and detail requests' do
+        expect(self).to receive(:response_for).with('www.irasutoya.com:443').twice
+                                             .and_return(http_response('502 Bad Gateway', ''))
+
+        expect { fetch_feed }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+        expect { fetch_detail('/detail') }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+      end
+
+      it 'bypasses the proxy for both requests when no_proxy matches the destination port' do
+        allow(ENV).to receive(:[]).with('no_proxy').and_return('www.irasutoya.com:443')
+
+        expect(fetch_feed.first).to include('/feed')
+        expect(fetch_detail('/detail').title).to eq('/detail')
+        expect(requests.pop).to equal(requests.pop)
+      end
+    end
   end
 
   it 'uses decoded http_proxy credentials for the HTTPS feed when https_proxy is unset' do
-    %w[HTTP_PROXY no_proxy NO_PROXY].each do |name|
-      allow(ENV).to receive(:[]).with(name).and_return(nil)
-    end
     proxy_url = origin.sub('://', '://proxy%2Buser:p%40ss:word+here@')
     allow(ENV).to receive(:[]).with('http_proxy').and_return(proxy_url)
     expect(Net::HTTP).to receive(:new)
@@ -300,6 +310,10 @@ RSpec.describe 'Illustration HTTP connections' do
 
   def fetch_detail(path, from: trusted_origin)
     Irasutoya::IrasutoLink.new(title: 'Illustration', show_url: from + path).fetch_irasuto
+  end
+
+  def fetch_feed
+    Irasutoya::ResponseFetcher.get("#{trusted_origin}/feed", max_bytes: 1024)
   end
 
   def serve(socket)
