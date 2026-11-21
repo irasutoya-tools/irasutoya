@@ -25,6 +25,20 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       ])
     end
 
+    it 'skips a leading one-pixel Blogger placeholder and keeps illustrations in order' do
+      stub_page('show_with_one_pixel_placeholder.html')
+      image_urls = %w[
+        https://blogger.googleusercontent.com/img/b/steam/s150/mark_manpu01_yuge.png
+        https://blogger.googleusercontent.com/img/b/laughter/s150/mark_manpu02_warai.png
+      ]
+
+      expect(described_class.from_url('https://www.irasutoya.com/2015/06/blog-post_275.html')).to have_attributes(
+        image_urls: image_urls,
+        image_url: image_urls.first,
+        postthumb_image_url: image_urls.first
+      )
+    end
+
     it 'rejects a search results page' do
       stub_page('list.html')
 
