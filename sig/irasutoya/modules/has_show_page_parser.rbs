@@ -8,9 +8,7 @@ module Irasutoya
       end
 
       module PrivateMethods
-        def self.title_from: (document: untyped) -> String
-        def self.description_from: (document: untyped) -> String
-        def self.image_urls_from: (document: untyped, url: String?) -> Array[String]
+        def self.image_urls_from: (post: untyped, url: String?) -> Array[String]
         private def self.resolve_image_url: (String source, String? page_url) -> String?
         private def self.one_pixel_blogger_image?: (URI::HTTP url) -> bool
       end
