@@ -108,16 +108,17 @@ RSpec.describe 'Page loading overrides' do
         .to raise_error(ArgumentError, 'Invalid Irasutoya page URL')
     end
 
-    it 'passes the page URL to URL-aware parser overrides' do
-      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(document)
-      expected_document = document
+    it 'passes the final document URL to URL-aware parser overrides' do
+      final_url = 'https://www.irasutoya.com/2026/11/post.html'
+      expected_document = Nokogiri::HTML.parse('<html></html>', final_url)
+      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(expected_document)
       receiver.define_singleton_method(:parse_show_page) do |document:, url:|
         raise 'Unexpected document' unless document.equal?(expected_document)
 
         { title: 'Saved post', description: '', image_urls: [URI.join(url, 'image.png').to_s] }
       end
 
-      expect(receiver.from_url(detail_url).image_url).to eq('https://www.irasutoya.com/2014/03/image.png')
+      expect(receiver.from_url(detail_url).image_url).to eq('https://www.irasutoya.com/2026/11/image.png')
     end
 
     it 'resolves relative images against the fetched document URL while retaining the requested URL' do
@@ -138,5 +139,16 @@ RSpec.describe 'Page loading overrides' do
 
     include_examples 'detail loading with receiver overrides'
     include_examples 'detail post validation'
+
+    it 'resolves relative images when a document-only parser override calls super' do
+      html = '<div class="post"><div class="title"><h2>Cat</h2></div><div class="entry"><img src="cat.png"></div></div>'
+      redirected_document = Nokogiri::HTML.parse(html, 'https://example.com/archive/post.html')
+      allow(receiver).to receive(:fetch_page_and_parse).with(detail_url).and_return(redirected_document)
+      receiver.define_singleton_method(:parse_show_page) { |document:| super(document: document) }
+
+      expect(illustration).to have_attributes(
+        url: detail_url, title: 'Cat', image_url: 'https://example.com/archive/cat.png'
+      )
+    end
   end
 end
