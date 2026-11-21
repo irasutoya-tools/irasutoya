@@ -42,10 +42,11 @@ module Irasutoya
     private_class_method :parse_detail
 
     def self.list_links(document, page_url, parse)
-      parse.call(document: document).map do |parsed|
-        href = parsed.fetch(:show_url)
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
-                        thumbnail_url: parsed[:thumbnail_url])
+      parse.call(document: document).filter_map do |parsed|
+        show_url = resolve_detail_href(page_url, parsed.fetch(:show_url))
+        next unless show_url
+
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: show_url, thumbnail_url: parsed[:thumbnail_url])
       end
     end
     private_class_method :list_links
@@ -90,11 +91,10 @@ module Irasutoya
     private_class_method :older_page_url
 
     def self.resolve_detail_href(page_url, href)
-      return href if href.empty? || href.match?(/\A[a-z][a-z0-9+.-]*:/i)
-
-      URI.join(page_url, href).to_s
+      uri = URI.join(page_url, href)
+      uri.to_s if Modules::HasDocumentFetcher.trusted_page_uri?(uri)
     rescue URI::Error
-      href
+      nil
     end
     private_class_method :resolve_detail_href
   end

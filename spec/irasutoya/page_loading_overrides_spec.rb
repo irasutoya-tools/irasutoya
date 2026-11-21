@@ -3,15 +3,16 @@
 RSpec.describe 'Page loading overrides' do
   let(:document) { Object.new }
   let(:detail_url) { 'https://example.com/illustration' }
+  let(:list_detail_url) { 'https://www.irasutoya.com/2018/09/cat.html' }
 
   shared_examples 'list loading with receiver overrides' do
     it 'builds links from the receiver fetch and parser results' do
       allow(receiver).to receive(:fetch_page_and_parse).with(list_url).and_return(document)
       allow(receiver).to receive(:parse_list_page).with(document: document)
-                                                  .and_return([{ title: 'Custom link', show_url: detail_url }])
+                                                  .and_return([{ title: 'Custom link', show_url: list_detail_url }])
 
       expect(links).to contain_exactly(
-        an_instance_of(Irasutoya::IrasutoLink).and(have_attributes(title: 'Custom link', show_url: detail_url,
+        an_instance_of(Irasutoya::IrasutoLink).and(have_attributes(title: 'Custom link', show_url: list_detail_url,
                                                                thumbnail_url: nil))
       )
     end
@@ -63,9 +64,9 @@ RSpec.describe 'Page loading overrides' do
       allow(receiver).to receive(:fetch_page_and_parse).with(list_url).and_return(first_page)
       allow(receiver).to receive(:fetch_page_and_parse).with(next_url).and_return(document)
       expect(receiver).to receive(:parse_list_page).with(document: document)
-                                                   .and_return([{ title: 'Custom link', show_url: detail_url }])
+                                                   .and_return([{ title: 'Custom link', show_url: list_detail_url }])
 
-      expect(receiver.search(query: 'cat', page: 1).map(&:show_url)).to eq([detail_url])
+      expect(receiver.search(query: 'cat', page: 1).map(&:show_url)).to eq([list_detail_url])
     end
   end
 
