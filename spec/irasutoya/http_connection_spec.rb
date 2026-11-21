@@ -117,6 +117,22 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(fetch_detail('/complete').title).to eq('/complete')
   end
 
+  it 'times out mid-chunk while the server is still open and reconnects for the next fetch' do
+    stub_const('Irasutoya::Modules::HasDocumentFetcher::FETCH_TIMEOUT', 0.2)
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    expect { fetch_detail('/stalled-chunk') }.to raise_error(Timeout::Error)
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+    expect(elapsed).to be_between(0.15, 0.7)
+    stalled_socket = requests.pop(true)
+    expect(stalled_socket).not_to be_closed
+
+    expect(fetch_detail('/complete').title).to eq('/complete')
+    expect(requests.pop(true)).not_to equal(stalled_socket)
+  ensure
+    release_body << true
+  end
+
   it 'reconnects when the server closes an idle connection' do
     fetch_detail('/first')
     original_socket = requests.pop
@@ -322,7 +338,11 @@ RSpec.describe 'Illustration HTTP connections' do
       nil until ["\r\n", nil].include?(socket.gets)
       requests << socket
       response = response_for(path)
-      if path.start_with?('/slow/body')
+      if path == '/stalled-chunk'
+        socket.write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\na")
+        release_body.pop
+        break
+      elsif path.start_with?('/slow/body')
         headers, body = response.split("\r\n\r\n", 2)
         socket.write(headers, "\r\n\r\n")
         withheld_bodies << socket

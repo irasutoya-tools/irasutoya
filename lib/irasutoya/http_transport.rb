@@ -1,8 +1,23 @@
 # frozen_string_literal: true
 
+require 'English'
+
 module Irasutoya
   # Net::HTTP retries Timeout::Error, so translate the deadline at the fetch boundary.
   class FetchDeadlineExceeded < StandardError; end
+
+  module ChunkedReadDeadline
+    def read(...)
+      deadline = $ERROR_INFO
+      if deadline.is_a?(FetchDeadlineExceeded)
+        # Net::HTTP reads the chunk terminator in an ensure block.
+        close
+        raise deadline
+      end
+
+      super
+    end
+  end
 
   class HttpSessionPool
     MAX_CONNECTIONS_PER_ORIGIN = 4
@@ -19,6 +34,7 @@ module Irasutoya
     end
 
     def read_body(http, response, max_bytes)
+      response.instance_variable_get(:@socket).extend(ChunkedReadDeadline) if response.chunked?
       body = ''.b
       response.read_body do |chunk|
         abort_download(http, max_bytes) if body.bytesize + chunk.bytesize > max_bytes
@@ -29,9 +45,7 @@ module Irasutoya
     rescue IOError => e
       # Net::HTTP can try to read the chunk terminator while unwinding.
       cause = e.cause
-      raise cause if cause.is_a?(ResponseTooLargeError)
-
-      raise
+      raise(cause.is_a?(ResponseTooLargeError) ? cause : e)
     end
 
     def close_inherited_connections
@@ -204,5 +218,6 @@ module Irasutoya
   end
 
   Process.singleton_class.prepend(ForkCleanup) if Process.respond_to?(:_fork)
-  private_constant :FetchDeadlineExceeded, :HttpSessionPool, :HttpSession, :HTTP_TRANSPORT, :ForkCleanup
+  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :HttpSessionPool, :HttpSession, :HTTP_TRANSPORT,
+                   :ForkCleanup
 end

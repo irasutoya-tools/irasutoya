@@ -1,5 +1,15 @@
+$ERROR_INFO: Exception?
+
 module Irasutoya
   class FetchDeadlineExceeded < StandardError
+  end
+
+  interface _ChunkSocket
+    def close: () -> void
+  end
+
+  module ChunkedReadDeadline : _ChunkSocket
+    def read: (Integer, ?untyped, ?bool) -> untyped
   end
 
   class HttpSessionPool
