@@ -2,6 +2,8 @@
 
 Bug reports and pull requests are welcome. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) when participating.
 
+See the [architecture guide](docs/architecture.md) for where to start reading the code and specs.
+
 ## Set up your development environment
 
 Fork the repository on GitHub and clone your fork. Use the Ruby version in [`.ruby-version`](.ruby-version), then install the Bundler version listed under `BUNDLED WITH` in [`Gemfile.lock`](Gemfile.lock) if needed. From the repository root, install the development dependencies.
