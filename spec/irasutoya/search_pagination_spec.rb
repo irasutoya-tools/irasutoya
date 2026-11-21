@@ -59,6 +59,27 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  it 'returns an empty array without another request when the older link is malformed' do
+    stub_search_page(search_uri, first_results, 'https://[bad]/search')
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).once
+  end
+
+  it 'propagates URI errors raised while fetching a valid older link' do
+    allow(page_http).to receive(:request_get).with(next_uri.request_uri).and_raise(URI::InvalidURIError)
+
+    expect { described_class.search(query: query, page: 1) }.to raise_error(URI::InvalidURIError)
+  end
+
+  it 'yields the current page and stops enumeration when the older link is malformed' do
+    stub_search_page(search_uri, first_results, 'https://[bad]/search')
+    expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+    expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).once
+  end
+
   it 'fetches nothing until enumeration starts and stops at a page boundary' do
     results = described_class.each_search_result(query: query)
 
