@@ -52,9 +52,32 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     it 'decodes label path segments and preserves the category query' do
       categories = described_class.all
 
-      expect(categories.map(&:title)).to eq ['C++', 'Art / Design']
+      expect(categories.map(&:title)).to eq ['C++', 'Art / Design', 'Cats']
       expect(categories.first.list_url).to eq 'https://www.irasutoya.com/search/label/C++?max-results=20'
     end
+  end
+
+  it 'resolves sidebar links against the redirected homepage and fetches a relative category' do
+    http = stub_page('index_category_links.html')
+    redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+    redirect['Location'] = '/search/index.html'
+    redirect['Content-Length'] = '0'
+    allow(redirect).to receive(:read_body).and_return('')
+    allow(http).to receive(:request_get).with('/').and_yield(redirect).and_return(redirect)
+    listing = Net::HTTPOK.new('1.1', '200', 'OK')
+    html = File.read('spec/files/list.html')
+    allow(listing).to receive(:body).and_return(html)
+    allow(listing).to receive(:read_body).and_yield(html)
+    category_path = '/search/label/Cats?max-results=20'
+    allow(http).to receive(:request_get).with(category_path).and_yield(listing).and_return(listing)
+
+    categories = described_class.all.to_h { |category| [category.title, category] }
+
+    expect(categories.fetch('Dogs').list_url).to eq 'https://www.irasutoya.com/search/label/Dogs'
+    cats = categories.fetch('Cats')
+    expect(cats.list_url).to eq "https://www.irasutoya.com#{category_path}"
+    expect(cats.fetch_irasuto_links.first).to be_a(Irasutoya::IrasutoLink)
+    expect(http).to have_received(:request_get).with(category_path).once
   end
 
   describe '#fetch_irasuto_links' do

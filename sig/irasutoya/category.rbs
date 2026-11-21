@@ -13,6 +13,7 @@ module Irasutoya
     def each_irasuto_link: () -> Enumerator[IrasutoLink, void]
                         | () { (IrasutoLink) -> void } -> void
 
-    private def self.category_from_url: (String) -> Category?
+    private def self.category_hrefs: (untyped) -> Array[String]
+    private def self.category_from_url: (String, String) -> Category?
   end
 end

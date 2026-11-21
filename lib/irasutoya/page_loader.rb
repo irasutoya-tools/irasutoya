@@ -26,6 +26,11 @@ module Irasutoya
       Irasuto.new(url: url, title: title, description: parsed.fetch(:description), image_urls: image_urls)
     end
 
+    def self.effective_url(document, requested_url)
+      page_url = document.url if document.respond_to?(:url)
+      page_url || requested_url
+    end
+
     def self.parse_detail(parser, document, url)
       accepts_url = parser.parameters.any? do |kind, name|
         kind == :keyrest || (%i[key keyreq].include?(kind) && name == :url)
@@ -81,12 +86,6 @@ module Irasutoya
       URI.join(page_url, href).to_s unless href.nil? || href.empty?
     end
     private_class_method :older_page_url
-
-    def self.effective_url(document, requested_url)
-      page_url = document.url if document.respond_to?(:url)
-      page_url || requested_url
-    end
-    private_class_method :effective_url
 
     def self.resolve_detail_href(page_url, href)
       return href if href.empty? || href.match?(/\A[a-z][a-z0-9+.-]*:/i)
