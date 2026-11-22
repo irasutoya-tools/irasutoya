@@ -46,7 +46,18 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
     end
 
-    it 'rejects a titled post with only missing or blank image sources' do
+    it 'keeps the illustration fields when a later entry contains its own caption and image' do
+      stub_page('show_with_unrelated_entry.html')
+
+      expect(described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html')).to have_attributes(
+        title: 'Illustration title',
+        description: 'Illustration caption',
+        image_urls: ['https://www.irasutoya.com/2014/03/art.png'],
+        has_multiple_images: false
+      )
+    end
+
+    it 'rejects a titled post with only missing or blank image sources even when another entry has an image' do
       stub_page('show_without_image_sources.html')
 
       expect { described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html') }
