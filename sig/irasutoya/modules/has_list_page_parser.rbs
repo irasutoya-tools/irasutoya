@@ -5,9 +5,13 @@ module Irasutoya
 
       module Methods
         def parse_list_page: (document: untyped) -> Array[{ title: String, show_url: String, thumbnail_url: String? }]
+
+        def each_list_card: (document: untyped) -> Enumerator[{ title: String, show_url: String, thumbnail_url: String? }, void]
+                          | (document: untyped) { ({ title: String, show_url: String, thumbnail_url: String? }) -> void } -> void
       end
 
       module PrivateMethods
+        def self.parse_card: (untyped) -> { title: String, show_url: String, thumbnail_url: String? }?
         def self.thumbnail_url_from: (box: untyped) -> String?
       end
     end

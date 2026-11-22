@@ -91,13 +91,29 @@ RSpec.describe Irasutoya::Irasuto do
   end
 
   it 'enumerates results in order through the last page with one request per page' do
+    stub_search_page(first_page_uri, first_results, next_href, include_incomplete: true)
     expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
     links = described_class.each_search_result(query: query).to_a
 
     expect(links.map(&:show_url)).to eq(expected_urls)
+    expect(links.map(&:title)).to eq(['Cat'] * expected_urls.size)
     expect(links.map(&:thumbnail_url)).to eq([thumbnail_url] * expected_urls.size)
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'extracts fields and constructs a link only for the first card when taking one result' do
+    parser = Irasutoya::Modules::HasListPageParser::PrivateMethods
+    first_url = URI.join(search_url, first_results.first).to_s
+    expect(parser).to receive(:parse_card).once.and_call_original
+    expect(Irasutoya::IrasutoLink).to receive(:new).with(title: 'Cat', show_url: first_url, thumbnail_url: thumbnail_url)
+                                                 .once.and_call_original
+
+    links = described_class.each_search_result(query: query).take(1)
+
+    expect(links.map(&:show_url)).to eq([first_url])
+    expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
+    expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
   it 'stops enumeration when older links form a cycle' do
@@ -220,7 +236,7 @@ RSpec.describe Irasutoya::Irasuto do
     allow(page_http).to receive(:request_get).with(uri.request_uri).and_yield(redirect).and_return(redirect)
   end
 
-  def stub_search_page(uri, paths, older_href = nil)
+  def stub_search_page(uri, paths, older_href = nil, include_incomplete: false)
     results = paths.map do |path|
       <<~HTML
         <div class="box">
@@ -231,6 +247,7 @@ RSpec.describe Irasutoya::Irasuto do
         </div>
       HTML
     end
+    results.insert(1, '<div class="box"><a href="/incomplete.html">Missing title</a></div>') if include_incomplete
     pager = %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(older_href)}">Next</a>) if older_href
     stub_html(page_http, "<html><body>#{results.join}#{pager}</body></html>", path: uri.request_uri)
   end

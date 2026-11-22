@@ -1,16 +1,18 @@
 module Irasutoya
   module PageLoader
+    type list_card = { title: String, show_url: String, ?thumbnail_url: String? }
+
     def self.load_list: (
       String,
       fetch: ^(String) -> untyped,
-      parse: ^(document: untyped) -> Array[{ title: String, show_url: String, ?thumbnail_url: String? }],
+      parse: ^(document: untyped) -> Array[list_card],
       ?page: Integer
     ) -> Array[IrasutoLink]
 
     def self.each_list_link: (
       String,
       fetch: ^(String) -> untyped,
-      parse: ^(document: untyped) -> Array[{ title: String, show_url: String, ?thumbnail_url: String? }]
+      parse: ^(document: untyped) -> Enumerator[list_card, void]
     ) { (IrasutoLink) -> void } -> void
 
     def self.load_detail: (
@@ -23,9 +25,7 @@ module Irasutoya
 
     private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String] }
     private def self.fetch_list_page: (String, Integer, ^(String) -> untyped) -> [untyped, String]?
-    private def self.list_links: (
-      untyped, String, ^(document: untyped) -> Array[{ title: String, show_url: String, ?thumbnail_url: String? }]
-    ) -> Array[IrasutoLink]
+    private def self.list_link: (list_card, String) -> IrasutoLink?
     private def self.each_list_page: (String, ^(String) -> untyped) { (untyped, String) -> void } -> void
     private def self.older_page_url: (untyped, String) -> String?
     private def self.resolve_detail_href: (String, String) -> String?
