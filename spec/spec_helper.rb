@@ -2,7 +2,8 @@
 
 if ENV['COVERAGE']
   require 'simplecov'
-  SimpleCov.add_filter ['spec']
+  SimpleCov.cover 'lib/**/*.rb'
+  SimpleCov.minimum_coverage line: 97.5
   SimpleCov.start
 end
 
