@@ -7,12 +7,15 @@ module Irasutoya
       return [] unless listing
 
       document, page_url = listing
-      list_links(document, page_url, parse)
+      parse.call(document: document).filter_map { |card| list_link(card, page_url) }
     end
 
-    def self.each_list_link(url, fetch:, parse:, &)
+    def self.each_list_link(url, fetch:, parse:)
       each_list_page(url, fetch) do |document, page_url|
-        list_links(document, page_url, parse).each(&)
+        parse.call(document: document).each do |card|
+          link = list_link(card, page_url)
+          yield link if link
+        end
       end
     end
 
@@ -41,15 +44,13 @@ module Irasutoya
     end
     private_class_method :parse_detail
 
-    def self.list_links(document, page_url, parse)
-      parse.call(document: document).filter_map do |parsed|
-        show_url = resolve_detail_href(page_url, parsed.fetch(:show_url))
-        next unless show_url
+    def self.list_link(card, page_url)
+      show_url = resolve_detail_href(page_url, card.fetch(:show_url))
+      return unless show_url
 
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: show_url, thumbnail_url: parsed[:thumbnail_url])
-      end
+      IrasutoLink.new(title: card.fetch(:title), show_url: show_url, thumbnail_url: card[:thumbnail_url])
     end
-    private_class_method :list_links
+    private_class_method :list_link
 
     def self.fetch_list_page(url, page, fetch)
       each_list_page(url, fetch) do |document, page_url|

@@ -11,7 +11,19 @@ module Irasutoya
 
       module Methods
         def parse_list_page(document:)
-          document.css('.box').filter_map do |box|
+          list_cards(document).to_a
+        end
+
+        private
+
+        def lazy_list_page(document:)
+          return parse_list_page(document: document).lazy unless method(:parse_list_page).owner == Methods
+
+          list_cards(document)
+        end
+
+        def list_cards(document)
+          document.css('.box').lazy.filter_map do |box|
             anchors = box.css('a')
             title = anchors[1]&.text
             show_url = anchors.first&.[]('href')

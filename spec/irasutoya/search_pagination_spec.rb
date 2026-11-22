@@ -90,6 +90,30 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
+  it 'extracts fields and builds a link only for the first card when taking one result' do
+    allow(described_class).to receive(:fetch_page_and_parse).and_wrap_original do |fetch, url|
+      document = fetch.call(url)
+      cards = document.css('.box')
+      allow(document).to receive(:css).with('.box').and_return(cards)
+      allow(cards.first).to receive(:css).and_call_original
+      expect(cards.first).to receive(:css).with('a').once.and_call_original
+      expect(cards.first).to receive(:at_css).with('.boxim a script').once.and_call_original
+      cards.drop(1).each do |card|
+        expect(card).not_to receive(:css)
+        expect(card).not_to receive(:at_css)
+      end
+      document
+    end
+    first_url = URI.join(search_url, first_results.first).to_s
+    expect(Irasutoya::IrasutoLink).to receive(:new).with(
+      title: 'Cat', show_url: first_url, thumbnail_url: thumbnail_url
+    ).once.and_call_original
+
+    expect(described_class.each_search_result(query: query).take(1).map(&:show_url)).to eq([first_url])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
+  end
+
   it 'enumerates results in order through the last page with one request per page' do
     expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
     links = described_class.each_search_result(query: query).to_a

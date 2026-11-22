@@ -75,6 +75,12 @@ RSpec.describe 'Page loading overrides' do
     let(:links) { receiver.fetch_irasuto_links }
 
     include_examples 'list loading with receiver overrides'
+
+    context 'when enumerating' do
+      let(:links) { receiver.each_irasuto_link.take(1) }
+
+      include_examples 'list loading with receiver overrides'
+    end
   end
 
   describe 'random detail loading' do
