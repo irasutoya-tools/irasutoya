@@ -50,6 +50,7 @@ From the directory where you saved the script, run `bundle exec ruby find_illust
 ## Usage
 
 See the [Ruby API reference](docs/usage.md) for pagination, return values, and fetch behavior.
+See [Troubleshooting](docs/troubleshooting.md) for empty results and fetch errors.
 
 Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
 HTML responses are limited to 4 MiB and feed responses to 1 MiB. Fetch operations raise
