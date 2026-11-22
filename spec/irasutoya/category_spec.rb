@@ -49,7 +49,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   describe '.all with sidebar links containing queries' do
     before { stub_page('index_category_links.html') }
 
-    it 'decodes label path segments and preserves the category query' do
+    it 'returns only trusted category links and preserves decoded titles and queries' do
       categories = described_class.all
 
       expect(categories.map(&:title)).to eq ['C++', 'Art / Design', 'Cats', 'Cats']
@@ -82,6 +82,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
 
     categories = described_class.all
 
+    expect(categories.map(&:title)).to contain_exactly('C++', 'Art / Design', 'Cats', 'Cats', 'Dogs')
     expect(categories.map(&:list_url)).to include('https://www.irasutoya.com/search/label/Dogs')
     cats = categories.find { |category| category.list_url == "https://www.irasutoya.com#{category_path}" }
     expect(cats).to have_attributes(title: 'Cats')
