@@ -46,14 +46,19 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  describe '.all with sidebar links containing queries' do
+  describe '.all with mixed sidebar links' do
     before { stub_page('index_category_links.html') }
 
-    it 'decodes label path segments and preserves the category query' do
+    it 'deduplicates resolved listing URLs in sidebar order and preserves distinct queries' do
       categories = described_class.all
 
-      expect(categories.map(&:title)).to eq ['C++', 'Art / Design', 'Cats']
-      expect(categories.first.list_url).to eq 'https://www.irasutoya.com/search/label/C++?max-results=20'
+      expect(categories.map(&:title)).to eq ['C++', 'Art / Design', 'Cats', 'Cats']
+      expect(categories.map(&:list_url)).to eq %w[
+        https://www.irasutoya.com/search/label/C++?max-results=20
+        https://www.irasutoya.com/search/label/Art%20%2F%20Design
+        https://www.irasutoya.com/search/label/Cats?max-results=10
+        https://www.irasutoya.com/search/label/Cats?max-results=20
+      ]
     end
   end
 
