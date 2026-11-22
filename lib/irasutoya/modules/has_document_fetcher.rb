@@ -6,6 +6,7 @@ require 'timeout'
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      TRUSTED_HOST = 'www.irasutoya.com'
       FETCH_TIMEOUT = 10
       MAX_HTML_BYTES = 4 * 1024 * 1024
       REDIRECT_CODES = %w[301 302 303 307 308].freeze
@@ -14,6 +15,11 @@ module Irasutoya
         super
         klass.send(:include, Irasutoya::Modules::HasDocumentFetcher::Methods)
         klass.send(:extend, Irasutoya::Modules::HasDocumentFetcher::Methods)
+      end
+
+      def self.trusted_page_origin?(uri)
+        uri.is_a?(URI::HTTP) && uri.host&.casecmp?(TRUSTED_HOST) == true &&
+          uri.port == uri.default_port && uri.userinfo.nil?
       end
 
       module Methods
@@ -35,7 +41,6 @@ module Irasutoya
       end
 
       class HttpDocument
-        TRUSTED_HOST = 'www.irasutoya.com'
         MAX_REDIRECTS = 10
 
         def open(uri, &)
@@ -70,10 +75,7 @@ module Irasutoya
         end
 
         def trusted_page_uri(uri)
-          unless uri.is_a?(URI::HTTP) && uri.host&.casecmp?(TRUSTED_HOST) &&
-                 uri.port == uri.default_port && uri.userinfo.nil?
-            raise ArgumentError, 'Untrusted Irasutoya page URL'
-          end
+          raise ArgumentError, 'Untrusted Irasutoya page URL' unless HasDocumentFetcher.trusted_page_origin?(uri)
 
           URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query)
         end
