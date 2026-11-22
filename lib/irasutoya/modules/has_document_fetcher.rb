@@ -6,6 +6,7 @@ require 'timeout'
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      TRUSTED_HOST = 'www.irasutoya.com'
       FETCH_TIMEOUT = 10
       MAX_HTML_BYTES = 4 * 1024 * 1024
       REDIRECT_CODES = %w[301 302 303 307 308].freeze
@@ -14,6 +15,11 @@ module Irasutoya
         super
         klass.send(:include, Irasutoya::Modules::HasDocumentFetcher::Methods)
         klass.send(:extend, Irasutoya::Modules::HasDocumentFetcher::Methods)
+      end
+
+      def self.trusted_page_origin?(uri)
+        uri.is_a?(URI::HTTP) && uri.host&.casecmp?(TRUSTED_HOST) == true &&
+          uri.port == uri.default_port && uri.userinfo.nil?
       end
 
       module Methods
@@ -27,10 +33,6 @@ module Irasutoya
 
         private
 
-        def trusted_page_url?(uri)
-          HTTP_DOCUMENT.trusted_page_url?(uri)
-        end
-
         def with_fetch_timeout(&)
           Timeout.timeout(FETCH_TIMEOUT, FetchDeadlineExceeded, &)
         rescue FetchDeadlineExceeded => e
@@ -39,16 +41,10 @@ module Irasutoya
       end
 
       class HttpDocument
-        TRUSTED_HOST = 'www.irasutoya.com'
         MAX_REDIRECTS = 10
 
         def open(uri, &)
           fetch_page(trusted_page_uri(uri), MAX_REDIRECTS, &)
-        end
-
-        def trusted_page_url?(uri)
-          uri.is_a?(URI::HTTP) && uri.host.to_s.casecmp?(TRUSTED_HOST) &&
-            uri.port == uri.default_port && uri.userinfo.nil?
         end
 
         private
@@ -79,7 +75,7 @@ module Irasutoya
         end
 
         def trusted_page_uri(uri)
-          raise ArgumentError, 'Untrusted Irasutoya page URL' unless trusted_page_url?(uri)
+          raise ArgumentError, 'Untrusted Irasutoya page URL' unless HasDocumentFetcher.trusted_page_origin?(uri)
 
           URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query)
         end
@@ -88,7 +84,8 @@ module Irasutoya
           status = document.status.join(' ')
           raise OpenURI::HTTPError.new(status, document) unless REDIRECT_CODES.include?(response.code)
 
-          location = response['location'] or raise URI::InvalidURIError
+          location = response['location']
+          raise URI::InvalidURIError if location.nil? || location.strip.empty?
 
           uri.merge(location)
         rescue URI::InvalidURIError

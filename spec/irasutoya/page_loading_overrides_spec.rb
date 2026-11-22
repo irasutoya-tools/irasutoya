@@ -2,7 +2,7 @@
 
 RSpec.describe 'Page loading overrides' do
   let(:document) { Object.new }
-  let(:detail_url) { 'https://example.com/illustration' }
+  let(:detail_url) { 'https://www.irasutoya.com/2026/11/post.html' }
 
   shared_examples 'list loading with receiver overrides' do
     it 'builds links from the receiver fetch and parser results' do
@@ -134,6 +134,7 @@ RSpec.describe 'Page loading overrides' do
   end
 
   describe 'link traversal' do
+    let(:detail_url) { 'https://example.com/illustration' }
     let(:receiver) { Class.new(Irasutoya::IrasutoLink).new(title: 'Cat', show_url: detail_url) }
     let(:illustration) { receiver.fetch_irasuto }
 

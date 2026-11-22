@@ -17,7 +17,7 @@ module Irasutoya
         homepage_url = 'https://www.irasutoya.com'
         document = fetch_page_and_parse(homepage_url)
         page_url = PageLoader.effective_url(document, homepage_url)
-        category_hrefs(document).filter_map { |href| category_from_url(page_url, href) }
+        category_hrefs(document).filter_map { |href| category_from_url(page_url, href) }.uniq(&:list_url)
       end
 
       private
@@ -26,12 +26,12 @@ module Irasutoya
         widget = document.css('#sidebar-wrapper .widget').find { |item| item.search('h2').text == '詳細カテゴリー' }
         return [] unless widget
 
-        widget.css('a').filter_map { |anchor| anchor['href'] }.uniq
+        widget.css('a').filter_map { |anchor| anchor['href'] }
       end
 
       def category_from_url(page_url, href)
         url = URI.join(page_url, href)
-        return unless trusted_page_url?(url)
+        return unless Modules::HasDocumentFetcher.trusted_page_origin?(url)
 
         label = url.path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
         return unless label

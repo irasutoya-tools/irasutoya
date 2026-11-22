@@ -8,7 +8,10 @@ module Irasutoya
 
     MAX_FEED_BYTES = 1024 * 1024
     FEED_COUNT_TTL = 300
-    private_constant :FEED_COUNT_TTL
+    FEED_COUNT_LOCK = Mutex.new
+    FEED_COUNT_READY = ConditionVariable.new
+    FeedCountRefresh = Struct.new(:pid, :result, :error)
+    private_constant :FEED_COUNT_TTL, :FEED_COUNT_LOCK, :FEED_COUNT_READY, :FeedCountRefresh
 
     attr_reader :url, :title, :description
 
@@ -97,15 +100,27 @@ module Irasutoya
       end
 
       def random_url
-        entry = random_entry || random_entry(refresh: true)
-        raise 'Illustration feed has no entries' unless entry
+        alternate_url(random_entry) || alternate_url(random_entry(refresh: true)) ||
+          raise('Illustration feed has no usable post URL')
+      end
 
-        entry.fetch('link').find { |link| link['rel'] == 'alternate' }.fetch('href')
+      def alternate_url(entry)
+        links = entry&.[]('link')
+        link = links&.find { |candidate| candidate['rel'] == 'alternate' && http_url?(candidate['href']) }
+        link&.fetch('href')
+      end
+
+      def http_url?(url)
+        return false unless url.is_a?(String)
+
+        uri = URI.parse(url)
+        uri.is_a?(URI::HTTP) && !uri.host.to_s.empty?
+      rescue URI::Error
+        false
       end
 
       def random_entry(refresh: false)
-        count = cached_feed_count unless refresh
-        count, first_feed = refresh_feed_count unless count
+        count, first_feed = feed_count(refresh)
         raise 'Illustration feed has no entries' if count.zero?
 
         index = Random.rand(count) + 1
@@ -118,11 +133,60 @@ module Irasutoya
         count if expires_at && feed_count_time < expires_at
       end
 
-      def refresh_feed_count
+      def feed_count(refresh)
+        # Keep registration and cleanup atomic with respect to the fetch deadline.
+        with_count_interrupt(:never) do
+          pending = FEED_COUNT_LOCK.synchronize do
+            current = @feed_count_refresh
+            return wait_for_feed_count(current) if current && current.pid == Process.pid
+
+            count = cached_feed_count unless refresh
+            return [count, nil] if count
+
+            @feed_count_refresh = FeedCountRefresh.new(Process.pid)
+          end
+          refresh_feed_count(pending)
+        end
+      end
+
+      def wait_for_feed_count(refresh)
+        with_count_interrupt(:immediate) do
+          FEED_COUNT_READY.wait(FEED_COUNT_LOCK) while @feed_count_refresh.equal?(refresh)
+        end
+        error = refresh.error
+        raise error if error
+
+        refresh.result || raise(IOError, 'Feed count refresh interrupted')
+      end
+
+      def refresh_feed_count(refresh)
+        result = with_count_interrupt(:immediate) { fetch_feed_count }
+        refresh.result = result
+      rescue StandardError => e
+        refresh.error = e
+        raise
+      ensure
+        finish_feed_count_refresh
+      end
+
+      def finish_feed_count_refresh
+        FEED_COUNT_LOCK.synchronize do
+          @feed_count_refresh = nil
+          FEED_COUNT_READY.broadcast
+        end
+      end
+
+      def fetch_feed_count
         feed = fetch_feed(1)
         count = Integer(feed.dig('openSearch$totalResults', '$t'), 10)
         @feed_count_cache = count.positive? ? [count, feed_count_time + FEED_COUNT_TTL] : nil
         [count, feed]
+      end
+
+      def with_count_interrupt(timing, &)
+        # @type var thread: untyped
+        thread = Thread
+        thread.handle_interrupt(FetchDeadlineExceeded => timing, &)
       end
 
       def feed_count_time

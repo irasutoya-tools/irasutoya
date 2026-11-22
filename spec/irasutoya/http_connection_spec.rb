@@ -371,9 +371,9 @@ RSpec.describe 'Illustration HTTP connections' do
     return "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n<p>Partial</p>" if path == '/truncated'
 
     title, charset = path == '/encoded' ? ['珈琲', 'Shift_JIS'] : [path, 'UTF-8']
-    body = %(<div class="post"><div class="title"><h2>#{title}</h2></div></div>).encode(charset)
-    body << '<div class="entry"><img src="art.png"></div>'
-    http_response('200 OK', body, charset)
+    body = %(<div class="post"><div class="title"><h2>#{title}</h2></div>)
+    body << '<div class="entry"><img src="art.png"></div></div>'
+    http_response('200 OK', body.encode(charset), charset)
   end
 
   def http_response(status, body, charset = 'UTF-8')

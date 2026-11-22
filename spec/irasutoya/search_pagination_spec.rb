@@ -141,18 +141,16 @@ RSpec.describe Irasutoya::Irasuto do
   end
 
   context 'when the older page redirects to the first page' do
+    let(:query) { 'cat' }
+    let(:next_href) { '/alias' }
+
     before do
-      redirect = Net::HTTPFound.new('1.1', '302', 'Found')
-      redirect['Location'] = search_uri.request_uri
-      redirect['Content-Length'] = '0'
-      allow(redirect).to receive(:read_body)
-      allow(page_http).to receive(:request_get).with(next_uri.request_uri).and_yield(redirect).and_return(redirect)
+      stub_search_redirect(next_uri, search_uri)
     end
 
-    it 'returns the redirected results for the requested page' do
-      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
-
-      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
+    it 'returns no results for the requested page' do
+      expect(described_class.search(query: query, page: 1)).to eq([])
+      expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
     end
 
     it 'stops enumeration before yielding the redirected results again' do
@@ -164,6 +162,27 @@ RSpec.describe Irasutoya::Irasuto do
     end
   end
 
+  context 'when the older page redirects to an unvisited page' do
+    let(:redirected_uri) { URI.join(search_url, '/archive/cats/index.html') }
+    let(:next_results) { ['cat-8.html'] }
+    let(:expected_url) { URI.join(redirected_uri, next_results.first).to_s }
+
+    before do
+      stub_search_redirect(next_uri, redirected_uri)
+      stub_search_page(redirected_uri, next_results)
+    end
+
+    it 'returns the results at the redirect destination for the requested page' do
+      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq([expected_url])
+    end
+
+    it 'yields the results at the redirect destination after the first page' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+      expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls + [expected_url])
+    end
+  end
+
   context 'when the search redirects to another directory' do
     let(:first_page_uri) { URI.join(search_url, '/archive/cats/index.html') }
     let(:next_href) { 'older.html' }
@@ -171,11 +190,7 @@ RSpec.describe Irasutoya::Irasuto do
     let(:next_results) { %w[cat-8.html https://www.irasutoya.com/2018/09/cat-9.html] }
 
     before do
-      response = Net::HTTPFound.new('1.1', '302', 'Found')
-      response['Location'] = first_page_uri.request_uri
-      response['Content-Length'] = '0'
-      allow(response).to receive(:read_body)
-      allow(page_http).to receive(:request_get).with(search_uri.request_uri).and_yield(response).and_return(response)
+      stub_search_redirect(search_uri, first_page_uri)
     end
 
     it 'fetches the older page relative to the redirected page and returns its results' do
@@ -195,6 +210,14 @@ RSpec.describe Irasutoya::Irasuto do
       expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
       expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
     end
+  end
+
+  def stub_search_redirect(uri, destination)
+    redirect = Net::HTTPFound.new('1.1', '302', 'Found')
+    redirect['Location'] = destination.request_uri
+    redirect['Content-Length'] = '0'
+    allow(redirect).to receive(:read_body)
+    allow(page_http).to receive(:request_get).with(uri.request_uri).and_yield(redirect).and_return(redirect)
   end
 
   def stub_search_page(uri, paths, older_href = nil)

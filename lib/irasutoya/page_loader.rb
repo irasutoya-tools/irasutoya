@@ -42,27 +42,22 @@ module Irasutoya
     private_class_method :parse_detail
 
     def self.list_links(document, page_url, parse)
-      parse.call(document: document).map do |parsed|
-        href = parsed.fetch(:show_url)
-        IrasutoLink.new(title: parsed.fetch(:title), show_url: resolve_detail_href(page_url, href),
-                        thumbnail_url: parsed[:thumbnail_url])
+      parse.call(document: document).filter_map do |parsed|
+        show_url = resolve_detail_href(page_url, parsed.fetch(:show_url))
+        next unless show_url
+
+        IrasutoLink.new(title: parsed.fetch(:title), show_url: show_url, thumbnail_url: parsed[:thumbnail_url])
       end
     end
     private_class_method :list_links
 
     def self.fetch_list_page(url, page, fetch)
-      visited = Set[url]
-      document = fetch.call(url)
-      page.times do
-        page_url = effective_url(document, url)
-        visited.add(page_url)
-        url = older_page_url(document, page_url)
-        return nil unless url && visited.add?(url)
+      each_list_page(url, fetch) do |document, page_url|
+        return [document, page_url] if page <= 0
 
-        document = fetch.call(url)
+        page -= 1
       end
-
-      [document, effective_url(document, url)] if document
+      nil
     end
     private_class_method :fetch_list_page
 
@@ -90,11 +85,10 @@ module Irasutoya
     private_class_method :older_page_url
 
     def self.resolve_detail_href(page_url, href)
-      return href if href.empty? || href.match?(/\A[a-z][a-z0-9+.-]*:/i)
-
-      URI.join(page_url, href).to_s
+      uri = URI.join(page_url, href)
+      uri.to_s if Modules::HasDocumentFetcher.trusted_page_origin?(uri)
     rescue URI::Error
-      href
+      nil
     end
     private_class_method :resolve_detail_href
   end

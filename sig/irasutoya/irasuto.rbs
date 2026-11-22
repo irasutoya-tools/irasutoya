@@ -2,6 +2,15 @@ module Irasutoya
   class Irasuto
     MAX_FEED_BYTES: Integer
     FEED_COUNT_TTL: Integer
+    FEED_COUNT_LOCK: Mutex
+    FEED_COUNT_READY: ConditionVariable
+
+    class FeedCountRefresh < Struct[Integer | [Integer, Hash[String, untyped]] | StandardError | nil]
+      attr_reader pid: Integer
+      attr_accessor result: [Integer, Hash[String, untyped]]?
+      attr_accessor error: StandardError?
+      def self.new: (Integer pid) -> FeedCountRefresh
+    end
 
     include Modules::HasDocumentFetcher::Methods
     include Modules::HasListPageParser::Methods
@@ -16,6 +25,7 @@ module Irasutoya
 
     @image_urls: Array[String]
     self.@feed_count_cache: [Integer, Float]?
+    self.@feed_count_refresh: FeedCountRefresh?
 
     def image_urls: -> Array[String]
     def image_url: -> String?
@@ -32,9 +42,16 @@ module Irasutoya
     private def self.validate_input_url: (String) -> void
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]
     private def self.random_url: -> String
+    private def self.alternate_url: (Hash[String, untyped]?) -> String?
+    private def self.http_url?: (untyped) -> bool
     private def self.random_entry: (?refresh: bool) -> Hash[String, untyped]?
     private def self.cached_feed_count: -> Integer?
-    private def self.refresh_feed_count: -> [Integer, Hash[String, untyped]]
+    private def self.feed_count: (bool) -> [Integer, Hash[String, untyped]?]
+    private def self.wait_for_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]
+    private def self.refresh_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]
+    private def self.finish_feed_count_refresh: -> void
+    private def self.fetch_feed_count: -> [Integer, Hash[String, untyped]]
+    private def self.with_count_interrupt: [A] (:never | :immediate) { () -> A } -> A
     private def self.feed_count_time: -> Float
   end
 end

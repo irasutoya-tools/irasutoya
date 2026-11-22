@@ -52,8 +52,17 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     it 'returns only trusted category links and preserves decoded titles and queries' do
       categories = described_class.all
 
-      expect(categories.map(&:title)).to eq ['C++', 'Art / Design', 'Cats']
+      expect(categories.map(&:title)).to eq ['C++', 'Art / Design', 'Cats', 'Cats']
       expect(categories.first.list_url).to eq 'https://www.irasutoya.com/search/label/C++?max-results=20'
+    end
+
+    it 'keeps the first occurrence of each resolved listing URL in sidebar order' do
+      expect(described_class.all.map(&:list_url)).to eq [
+        'https://www.irasutoya.com/search/label/C++?max-results=20',
+        'https://www.irasutoya.com/search/label/Art%20%2F%20Design',
+        'https://www.irasutoya.com/search/label/Cats?max-results=10',
+        'https://www.irasutoya.com/search/label/Cats?max-results=20'
+      ]
     end
   end
 
@@ -71,12 +80,12 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     category_path = '/search/label/Cats?max-results=20'
     allow(http).to receive(:request_get).with(category_path).and_yield(listing).and_return(listing)
 
-    categories = described_class.all.to_h { |category| [category.title, category] }
+    categories = described_class.all
 
-    expect(categories.keys).to contain_exactly('C++', 'Art / Design', 'Cats', 'Dogs')
-    expect(categories.fetch('Dogs').list_url).to eq 'https://www.irasutoya.com/search/label/Dogs'
-    cats = categories.fetch('Cats')
-    expect(cats.list_url).to eq "https://www.irasutoya.com#{category_path}"
+    expect(categories.map(&:title)).to contain_exactly('C++', 'Art / Design', 'Cats', 'Cats', 'Dogs')
+    expect(categories.map(&:list_url)).to include('https://www.irasutoya.com/search/label/Dogs')
+    cats = categories.find { |category| category.list_url == "https://www.irasutoya.com#{category_path}" }
+    expect(cats).to have_attributes(title: 'Cats')
     expect(cats.fetch_irasuto_links.first).to be_a(Irasutoya::IrasutoLink)
     expect(http).to have_received(:request_get).with(category_path).once
   end

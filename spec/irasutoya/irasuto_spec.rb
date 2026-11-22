@@ -46,7 +46,18 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         .to raise_error(ArgumentError, 'URL does not point to an Irasutoya illustration post')
     end
 
-    it 'rejects a titled post with only missing or blank image sources' do
+    it 'keeps the illustration fields when a later entry contains its own caption and image' do
+      stub_page('show_with_unrelated_entry.html')
+
+      expect(described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html')).to have_attributes(
+        title: 'Illustration title',
+        description: 'Illustration caption',
+        image_urls: ['https://www.irasutoya.com/2014/03/art.png'],
+        has_multiple_images: false
+      )
+    end
+
+    it 'rejects a titled post with only missing or blank image sources even when another entry has an image' do
       stub_page('show_without_image_sources.html')
 
       expect { described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html') }
@@ -76,8 +87,13 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { described_class.from_url('https://www.irasutoya.com/post.html') }.to raise_error(URI::InvalidURIError)
     end
 
-    { 'missing' => nil, 'malformed' => '/invalid path' }.each do |condition, location|
-      it "reports a redirect with a #{condition} Location as an HTTP error" do
+    {
+      'missing' => nil,
+      'empty' => '',
+      'whitespace-only' => " \t ",
+      'malformed' => '/invalid path'
+    }.each do |condition, location|
+      it "reports an HTTP error when the redirect Location is #{condition}" do
         http = stub_page_http
         response = Net::HTTPFound.new('1.1', '302', 'Found')
         response['Location'] = location
@@ -213,6 +229,41 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
                                    .and_yield(updated_response).and_return(updated_response)
 
       2.times { expect(described_class.random.url).to eq(show_url) }
+    end
+
+    context 'when the selected feed entry has no usable alternate URL' do
+      let(:feed_count) { 1 }
+      let(:feed_body) do
+        feed = {
+          'openSearch$totalResults' => { '$t' => '1' },
+          'entry' => [{ 'link' => [{ 'rel' => 'self', 'href' => show_url }] }]
+        }
+        "callback(#{JSON.generate('feed' => feed)});"
+      end
+
+      it 'refreshes once and loads the detail page from the refreshed entry' do
+        refreshed_response = jsonp_response(feed_body.sub('"self"', '"alternate"'))
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(refreshed_response)
+        expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).ordered
+
+        expect(described_class.random.url).to eq(show_url)
+      end
+
+      it 'reports the feed error after two selections without an alternate link' do
+        expect(page_http).to receive(:request_get).with(feed_path(1)).twice.and_yield(feed_response)
+        expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
+
+        expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no usable post URL')
+      end
+
+      it 'reports the feed error when the refreshed alternate URL is invalid' do
+        refreshed_response = jsonp_response(feed_body.sub('"self"', '"alternate"').sub(show_url, '/relative.html'))
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(refreshed_response)
+
+        expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no usable post URL')
+      end
     end
 
     it 'raises an HTTP error before parsing a failed count response' do
