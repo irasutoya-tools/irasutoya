@@ -76,8 +76,13 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { described_class.from_url('https://www.irasutoya.com/post.html') }.to raise_error(URI::InvalidURIError)
     end
 
-    { 'missing' => nil, 'malformed' => '/invalid path' }.each do |condition, location|
-      it "reports a redirect with a #{condition} Location as an HTTP error" do
+    {
+      'missing' => nil,
+      'empty' => '',
+      'whitespace-only' => " \t ",
+      'malformed' => '/invalid path'
+    }.each do |condition, location|
+      it "reports an HTTP error when the redirect Location is #{condition}" do
         http = stub_page_http
         response = Net::HTTPFound.new('1.1', '302', 'Found')
         response['Location'] = location
