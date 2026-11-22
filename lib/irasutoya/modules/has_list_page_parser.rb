@@ -22,6 +22,14 @@ module Irasutoya
             yield card if card
           end
         end
+
+        private
+
+        def list_cards_for_enumeration(document:)
+          return each_list_card(document: document) if method(:parse_list_page).owner == Methods
+
+          parse_list_page(document: document)
+        end
       end
 
       module PrivateMethods

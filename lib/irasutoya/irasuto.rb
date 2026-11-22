@@ -75,7 +75,7 @@ module Irasutoya
         PageLoader.each_list_link(
           search_url(query),
           fetch: ->(page_url) { fetch_page_and_parse(page_url) },
-          parse: ->(document:) { each_list_card(document: document) },
+          parse: ->(document:) { list_cards_for_enumeration(document: document) },
           &block
         )
       end

@@ -4,10 +4,14 @@ module Irasutoya
       def self.included: (Class) -> void
 
       module Methods
-        def parse_list_page: (document: untyped) -> Array[{ title: String, show_url: String, thumbnail_url: String? }]
+        type list_card = { title: String, show_url: String, thumbnail_url: String? }
 
-        def each_list_card: (document: untyped) -> Enumerator[{ title: String, show_url: String, thumbnail_url: String? }, void]
-                          | (document: untyped) { ({ title: String, show_url: String, thumbnail_url: String? }) -> void } -> void
+        def parse_list_page: (document: untyped) -> Array[list_card]
+
+        def each_list_card: (document: untyped) -> Enumerator[list_card, void]
+                          | (document: untyped) { (list_card) -> void } -> void
+
+        private def list_cards_for_enumeration: (document: untyped) -> (Array[list_card] | Enumerator[list_card, void])
       end
 
       module PrivateMethods

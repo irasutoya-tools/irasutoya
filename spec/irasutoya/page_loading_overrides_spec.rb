@@ -34,6 +34,24 @@ RSpec.describe 'Page loading overrides' do
     end
   end
 
+  shared_examples 'list enumeration with a subclass parser' do
+    it 'yields the subclass parser result and stops after the first link' do
+      allow(receiver).to receive(:fetch_page_and_parse).with(list_url).and_return(document)
+      expected_document = document
+      show_url = detail_url
+      parser_owner.define_method(:parse_list_page) do |document:|
+        raise 'Unexpected document' unless document.equal?(expected_document)
+
+        [{ title: 'Custom link', show_url: show_url }]
+      end
+
+      expect(results.take(1)).to contain_exactly(
+        an_instance_of(Irasutoya::IrasutoLink).and(have_attributes(title: 'Custom link', show_url: detail_url,
+                                                               thumbnail_url: nil))
+      )
+    end
+  end
+
   shared_examples 'detail post validation' do
     it 'rejects a page with an image but no title' do
       untitled_page = Nokogiri::HTML.parse('<div class="post entry"><img src="cat.png"></div>')
@@ -54,8 +72,11 @@ RSpec.describe 'Page loading overrides' do
     let(:receiver) { Class.new(Irasutoya::Irasuto) }
     let(:list_url) { 'https://www.irasutoya.com/search?q=cat' }
     let(:links) { receiver.search(query: 'cat') }
+    let(:results) { receiver.each_search_result(query: 'cat') }
+    let(:parser_owner) { receiver.singleton_class }
 
     include_examples 'list loading with receiver overrides'
+    include_examples 'list enumeration with a subclass parser'
 
     it 'uses the receiver fetch override for every search page and parses the requested page' do
       next_url = 'https://www.irasutoya.com/search?q=cat&start=7'
@@ -73,8 +94,11 @@ RSpec.describe 'Page loading overrides' do
     let(:receiver) { Class.new(Irasutoya::Category).new(title: 'Cats', list_url: list_url) }
     let(:list_url) { 'https://example.com/categories/cats' }
     let(:links) { receiver.fetch_irasuto_links }
+    let(:results) { receiver.each_irasuto_link }
+    let(:parser_owner) { receiver.class }
 
     include_examples 'list loading with receiver overrides'
+    include_examples 'list enumeration with a subclass parser'
   end
 
   describe 'random detail loading' do

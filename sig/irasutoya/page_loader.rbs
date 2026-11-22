@@ -12,7 +12,7 @@ module Irasutoya
     def self.each_list_link: (
       String,
       fetch: ^(String) -> untyped,
-      parse: ^(document: untyped) -> Enumerator[list_card, void]
+      parse: ^(document: untyped) -> (Array[list_card] | Enumerator[list_card, void])
     ) { (IrasutoLink) -> void } -> void
 
     def self.load_detail: (
