@@ -57,6 +57,13 @@ RSpec.describe 'Page loading overrides' do
 
     include_examples 'list loading with receiver overrides'
 
+    context 'when enumerating links' do
+      let(:document) { Nokogiri::HTML.parse('<html></html>') }
+      let(:links) { receiver.each_search_result(query: 'cat').to_a }
+
+      include_examples 'list loading with receiver overrides'
+    end
+
     it 'uses the receiver fetch override for every search page and parses the requested page' do
       next_url = 'https://www.irasutoya.com/search?q=cat&start=7'
       first_page = Nokogiri::HTML.parse('<a class="blog-pager-older-link" href="?q=cat&start=7">Next</a>')
@@ -75,6 +82,13 @@ RSpec.describe 'Page loading overrides' do
     let(:links) { receiver.fetch_irasuto_links }
 
     include_examples 'list loading with receiver overrides'
+
+    context 'when enumerating links' do
+      let(:document) { Nokogiri::HTML.parse('<html></html>') }
+      let(:links) { receiver.each_irasuto_link.to_a }
+
+      include_examples 'list loading with receiver overrides'
+    end
   end
 
   describe 'random detail loading' do

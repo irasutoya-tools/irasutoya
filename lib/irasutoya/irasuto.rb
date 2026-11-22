@@ -80,7 +80,7 @@ module Irasutoya
         PageLoader.each_list_link(
           search_url(query),
           fetch: ->(page_url) { fetch_page_and_parse(page_url) },
-          parse: ->(document:) { parse_list_page(document: document) },
+          parse: ->(document:) { list_page_entries(document: document) },
           &block
         )
       end
