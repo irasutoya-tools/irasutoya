@@ -82,7 +82,8 @@ module Irasutoya
           status = document.status.join(' ')
           raise OpenURI::HTTPError.new(status, document) unless REDIRECT_CODES.include?(response.code)
 
-          location = response['location'] or raise URI::InvalidURIError
+          location = response['location']
+          raise URI::InvalidURIError if location.nil? || location.strip.empty?
 
           uri.merge(location)
         rescue URI::InvalidURIError
