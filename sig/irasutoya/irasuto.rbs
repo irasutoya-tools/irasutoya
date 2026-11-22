@@ -32,6 +32,8 @@ module Irasutoya
     private def self.validate_input_url: (String) -> void
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]
     private def self.random_url: -> String
+    private def self.alternate_url: (Hash[String, untyped]?) -> String?
+    private def self.http_url?: (untyped) -> bool
     private def self.random_entry: (?refresh: bool) -> Hash[String, untyped]?
     private def self.cached_feed_count: -> Integer?
     private def self.refresh_feed_count: -> [Integer, Hash[String, untyped]]

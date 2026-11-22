@@ -215,6 +215,41 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       2.times { expect(described_class.random.url).to eq(show_url) }
     end
 
+    context 'when the selected feed entry has no usable alternate URL' do
+      let(:feed_count) { 1 }
+      let(:feed_body) do
+        feed = {
+          'openSearch$totalResults' => { '$t' => '1' },
+          'entry' => [{ 'link' => [{ 'rel' => 'self', 'href' => show_url }] }]
+        }
+        "callback(#{JSON.generate('feed' => feed)});"
+      end
+
+      it 'refreshes once and loads the detail page from the refreshed entry' do
+        refreshed_response = jsonp_response(feed_body.sub('"self"', '"alternate"'))
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(refreshed_response)
+        expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).ordered
+
+        expect(described_class.random.url).to eq(show_url)
+      end
+
+      it 'reports the feed error after two selections without an alternate link' do
+        expect(page_http).to receive(:request_get).with(feed_path(1)).twice.and_yield(feed_response)
+        expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
+
+        expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no usable post URL')
+      end
+
+      it 'reports the feed error when the refreshed alternate URL is invalid' do
+        refreshed_response = jsonp_response(feed_body.sub('"self"', '"alternate"').sub(show_url, '/relative.html'))
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(refreshed_response)
+
+        expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no usable post URL')
+      end
+    end
+
     it 'raises an HTTP error before parsing a failed count response' do
       response = Net::HTTPBadRequest.new('1.1', '400', 'Bad Request')
       allow(page_http).to receive(:request_get).with(feed_path(1)).and_yield(response)

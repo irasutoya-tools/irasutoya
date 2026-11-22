@@ -97,10 +97,23 @@ module Irasutoya
       end
 
       def random_url
-        entry = random_entry || random_entry(refresh: true)
-        raise 'Illustration feed has no entries' unless entry
+        alternate_url(random_entry) || alternate_url(random_entry(refresh: true)) ||
+          raise('Illustration feed has no usable post URL')
+      end
 
-        entry.fetch('link').find { |link| link['rel'] == 'alternate' }.fetch('href')
+      def alternate_url(entry)
+        links = entry&.[]('link')
+        link = links&.find { |candidate| candidate['rel'] == 'alternate' && http_url?(candidate['href']) }
+        link&.fetch('href')
+      end
+
+      def http_url?(url)
+        return false unless url.is_a?(String)
+
+        uri = URI.parse(url)
+        uri.is_a?(URI::HTTP) && !uri.host.to_s.empty?
+      rescue URI::Error
+        false
       end
 
       def random_entry(refresh: false)
