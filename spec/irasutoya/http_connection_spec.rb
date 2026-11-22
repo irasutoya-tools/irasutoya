@@ -11,6 +11,7 @@ RSpec.describe 'Illustration HTTP connections' do
   let(:acceptor) { listener }
   let(:requests) { Queue.new }
   let(:disconnections) { Queue.new }
+  let(:proxy_settings) { {} }
 
   let(:release_body) { Queue.new }
   let(:withheld_bodies) { Queue.new }
@@ -44,10 +45,7 @@ RSpec.describe 'Illustration HTTP connections' do
       allow(http).to receive(:use_ssl=).with(true)
       http
     end
-    allow(ENV).to receive(:[]).and_call_original
-    %w[http_proxy HTTP_PROXY https_proxy HTTPS_PROXY no_proxy NO_PROXY CGI_HTTP_PROXY].each do |name|
-      allow(ENV).to receive(:[]).with(name).and_return(nil)
-    end
+    allow(ENV).to receive(:select) { |&filter| proxy_settings.select(&filter) }
     allow(IPSocket).to receive(:getaddress).and_call_original
     allow(IPSocket).to receive(:getaddress).with('www.irasutoya.com').and_return('192.0.2.1')
   end
@@ -145,7 +143,7 @@ RSpec.describe 'Illustration HTTP connections' do
 
   %w[https_proxy http_proxy].each do |proxy_setting|
     context "with only #{proxy_setting} configured" do
-      before { allow(ENV).to receive(:[]).with(proxy_setting).and_return(origin) }
+      before { proxy_settings[proxy_setting] = origin }
 
       it 'uses the same proxy for feed and detail requests' do
         expect(self).to receive(:response_for).with('www.irasutoya.com:443').twice
@@ -153,10 +151,11 @@ RSpec.describe 'Illustration HTTP connections' do
 
         expect { fetch_feed }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
         expect { fetch_detail('/detail') }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+        expect(IPSocket).to have_received(:getaddress).with('www.irasutoya.com').once
       end
 
       it 'bypasses the proxy for both requests when no_proxy matches the destination port' do
-        allow(ENV).to receive(:[]).with('no_proxy').and_return('www.irasutoya.com:443')
+        proxy_settings['no_proxy'] = 'www.irasutoya.com:443'
 
         expect(fetch_feed.first).to include('/feed')
         expect(fetch_detail('/detail').title).to eq('/detail')
@@ -165,9 +164,36 @@ RSpec.describe 'Illustration HTTP connections' do
     end
   end
 
+  it 'reuses a host and port bypass across both proxy settings until it expires' do
+    proxy_settings.merge!('https_proxy' => origin, 'http_proxy' => origin, 'no_proxy' => 'www.irasutoya.com:443')
+    decisions = Irasutoya.const_get(:HTTP_TRANSPORT).instance_variable_get(:@proxy_decisions)
+    allow(decisions).to receive(:monotonic_time).and_return(0.0)
+
+    expect(fetch_detail('/first').title).to eq('/first')
+    expect(fetch_detail('/second').title).to eq('/second')
+    expect(requests.pop).to equal(requests.pop)
+    expect(IPSocket).to have_received(:getaddress).with('www.irasutoya.com').twice
+
+    allow(decisions).to receive(:monotonic_time).and_return(5.0)
+    expect(fetch_detail('/third').title).to eq('/third')
+    expect(IPSocket).to have_received(:getaddress).with('www.irasutoya.com').exactly(4).times
+  end
+
+  it 'resolves a new route when no_proxy changes between requests' do
+    proxy_settings.merge!('http_proxy' => origin, 'no_proxy' => 'www.irasutoya.com:443')
+
+    expect(fetch_detail('/direct').title).to eq('/direct')
+    proxy_settings['no_proxy'] = 'www.irasutoya.com:80'
+    allow(self).to receive(:response_for).with('www.irasutoya.com:443')
+                                        .and_return(http_response('502 Bad Gateway', ''))
+
+    expect { fetch_detail('/proxied') }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
+    expect(IPSocket).to have_received(:getaddress).with('www.irasutoya.com').twice
+  end
+
   it 'uses decoded http_proxy credentials for the HTTPS feed when https_proxy is unset' do
     proxy_url = origin.sub('://', '://proxy%2Buser:p%40ss:word+here@')
-    allow(ENV).to receive(:[]).with('http_proxy').and_return(proxy_url)
+    proxy_settings['http_proxy'] = proxy_url
     expect(Net::HTTP).to receive(:new)
       .with('www.irasutoya.com', 443, '127.0.0.1', listener.addr[1], 'proxy+user', 'p@ss:word+here')
       .and_call_original

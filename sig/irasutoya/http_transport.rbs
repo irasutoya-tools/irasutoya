@@ -12,6 +12,27 @@ module Irasutoya
     def read: (Integer, ?untyped, ?bool) -> untyped
   end
 
+  class ProxyDecisions
+    type destination = [String, String, Integer]
+    type proxy_settings = Hash[String, String]
+    type decision = [proxy_settings, Float, URI::Generic?]
+
+    TTL: Float
+    MAX_ENTRIES: Integer
+    PROXY_SETTING: Regexp
+    @lock: Mutex
+    @entries: Hash[destination, decision]
+
+    def resolve: (URI::HTTP) -> URI::Generic?
+    def initialize: () -> void
+
+    private
+
+    def remember: (destination, proxy_settings, URI::Generic?) -> void
+    def monotonic_time: () -> Float
+    def find_proxy: (URI::HTTP, proxy_settings) -> URI::Generic?
+  end
+
   class HttpSessionPool
     type origin = [Integer, String, String, Integer, String?]
 
@@ -20,6 +41,7 @@ module Irasutoya
     @lock: Mutex
     @available: ConditionVariable
     @sessions: Hash[origin, Hash[HttpSession, bool]]
+    @proxy_decisions: ProxyDecisions
 
     def request: (URI::HTTP) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
     def read_body: (Net::HTTP, Net::HTTPResponse, Integer) -> String
@@ -28,7 +50,6 @@ module Irasutoya
 
     private
 
-    def find_proxy: (URI::HTTP) -> URI::Generic?
     def abort_download: (Net::HTTP, Integer) -> bot
     def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
     def acquire_session: (origin) -> HttpSession
