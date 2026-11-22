@@ -24,11 +24,16 @@ module Irasutoya
       )
     end
 
-    def initialize(url:, title:, description:, image_urls:)
+    def initialize(url:, title:, description:, image_urls:, categories: [])
       @url = url
       @title = title
       @description = description
       @image_urls = image_urls.dup
+      @categories = categories.dup
+    end
+
+    def categories
+      @categories.dup
     end
 
     def image_urls

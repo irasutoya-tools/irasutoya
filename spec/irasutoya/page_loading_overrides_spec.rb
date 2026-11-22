@@ -30,7 +30,7 @@ RSpec.describe 'Page loading overrides' do
 
       expect(illustration).to be_an_instance_of(Irasutoya::Irasuto)
         .and(have_attributes(url: detail_url, title: 'Custom title', description: 'Custom description',
-                             image_urls: image_urls))
+                             image_urls: image_urls, categories: []))
     end
   end
 
