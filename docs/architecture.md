@@ -45,10 +45,10 @@ The parser specs use saved pages under [`spec/files/`][fixtures]. See
 [detail-parser]: ../lib/irasutoya/modules/has_show_page_parser.rb
 [response]: ../lib/irasutoya/response_fetcher.rb
 [transport]: ../lib/irasutoya/http_transport.rb
-[listing-spec]: ../spec/irasutoya/incomplete_list_cards_spec.rb
-[pagination-spec]: ../spec/irasutoya/search_pagination_spec.rb
-[detail-spec]: ../spec/irasutoya/irasuto_spec.rb
-[timeout-spec]: ../spec/irasutoya/fetch_timeout_spec.rb
-[connection-spec]: ../spec/irasutoya/http_connection_spec.rb
-[fixtures]: ../spec/files/
+[listing-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/incomplete_list_cards_spec.rb
+[pagination-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/search_pagination_spec.rb
+[detail-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/irasuto_spec.rb
+[timeout-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/fetch_timeout_spec.rb
+[connection-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/http_connection_spec.rb
+[fixtures]: https://github.com/irasutoya-tools/irasutoya/tree/master/spec/files
 [contributing]: ../CONTRIBUTING.md
