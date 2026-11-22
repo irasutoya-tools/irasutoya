@@ -90,6 +90,28 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
+  it 'extracts fields and constructs a link only for the first card when taking one result' do
+    allow(Nokogiri::HTML).to receive(:parse).and_wrap_original do |parse, *args|
+      document = parse.call(*args)
+      boxes = document.css('.box')
+      first_box, *remaining_boxes = boxes.to_a
+      allow(document).to receive(:css).and_call_original
+      allow(document).to receive(:css).with('.box').and_return(boxes)
+      allow(first_box).to receive(:css).and_call_original
+      expect(first_box).to receive(:css).with('a').once.and_call_original
+      remaining_boxes.each { |box| expect(box).not_to receive(:css) }
+      document
+    end
+    expect(Irasutoya::IrasutoLink).to receive(:new).once.and_call_original
+
+    expect(described_class.each_search_result(query: query).take(1)).to match([
+      have_attributes(title: 'Cat', show_url: URI.join(search_url, first_results.first).to_s,
+                      thumbnail_url: thumbnail_url)
+    ])
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
+  end
+
   it 'enumerates results in order through the last page with one request per page' do
     expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
     links = described_class.each_search_result(query: query).to_a

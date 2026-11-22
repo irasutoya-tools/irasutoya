@@ -11,19 +11,33 @@ module Irasutoya
 
       module Methods
         def parse_list_page(document:)
-          document.css('.box').filter_map do |box|
-            anchors = box.css('a')
-            title = anchors[1]&.text
-            show_url = anchors.first&.[]('href')
-            next if title.to_s.strip.empty? || show_url.to_s.strip.empty?
+          list_page_cards(document: document).to_a
+        end
 
-            { title: title, show_url: show_url, thumbnail_url: PrivateMethods.thumbnail_url_from(box: box) }
-          end
+        private
+
+        def list_page_entries(document:)
+          return parse_list_page(document: document) unless method(:parse_list_page).owner == Methods
+
+          list_page_cards(document: document)
+        end
+
+        def list_page_cards(document:)
+          document.css('.box').lazy.filter_map { |box| PrivateMethods.parse_card(box: box) }
         end
       end
 
       module PrivateMethods
         class << self
+          def parse_card(box:)
+            anchors = box.css('a')
+            title = anchors[1]&.text
+            show_url = anchors.first&.[]('href')
+            return if title.to_s.strip.empty? || show_url.to_s.strip.empty?
+
+            { title: title, show_url: show_url, thumbnail_url: thumbnail_url_from(box: box) }
+          end
+
           def thumbnail_url_from(box:)
             script = box.at_css('.boxim a script')
             thumbnail_call = %r{\bdocument\.write\(\s*bp_thumbnail_resize\(\s*(["'])(https?://[^"'\s\\]+)\1\s*,}
