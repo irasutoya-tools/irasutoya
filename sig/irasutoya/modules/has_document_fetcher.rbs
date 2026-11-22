@@ -12,6 +12,7 @@ module Irasutoya
 
         private
 
+        def trusted_page_url?: (URI::Generic) -> bool
         def with_fetch_timeout: [A] () { (Numeric) -> A } -> A
       end
 
@@ -20,6 +21,7 @@ module Irasutoya
         MAX_REDIRECTS: Integer
 
         def open: [Result] (untyped) { (untyped) -> Result } -> Result
+        def trusted_page_url?: (URI::Generic) -> bool
 
         private
 

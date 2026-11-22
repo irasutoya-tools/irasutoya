@@ -31,6 +31,8 @@ module Irasutoya
 
       def category_from_url(page_url, href)
         url = URI.join(page_url, href)
+        return unless trusted_page_url?(url)
+
         label = url.path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
         return unless label
 

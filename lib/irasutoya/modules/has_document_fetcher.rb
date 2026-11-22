@@ -27,6 +27,10 @@ module Irasutoya
 
         private
 
+        def trusted_page_url?(uri)
+          HTTP_DOCUMENT.trusted_page_url?(uri)
+        end
+
         def with_fetch_timeout(&)
           Timeout.timeout(FETCH_TIMEOUT, FetchDeadlineExceeded, &)
         rescue FetchDeadlineExceeded => e
@@ -40,6 +44,11 @@ module Irasutoya
 
         def open(uri, &)
           fetch_page(trusted_page_uri(uri), MAX_REDIRECTS, &)
+        end
+
+        def trusted_page_url?(uri)
+          uri.is_a?(URI::HTTP) && uri.host.to_s.casecmp?(TRUSTED_HOST) &&
+            uri.port == uri.default_port && uri.userinfo.nil?
         end
 
         private
@@ -70,10 +79,7 @@ module Irasutoya
         end
 
         def trusted_page_uri(uri)
-          unless uri.is_a?(URI::HTTP) && uri.host&.casecmp?(TRUSTED_HOST) &&
-                 uri.port == uri.default_port && uri.userinfo.nil?
-            raise ArgumentError, 'Untrusted Irasutoya page URL'
-          end
+          raise ArgumentError, 'Untrusted Irasutoya page URL' unless trusted_page_url?(uri)
 
           URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query)
         end
