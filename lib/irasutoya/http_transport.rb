@@ -19,13 +19,59 @@ module Irasutoya
     end
   end
 
+  class ProxyDecisions
+    TTL = 5.0
+    MAX_ENTRIES = 32
+    PROXY_SETTING = /\A(?:https?_proxy|no_proxy|cgi_http_proxy|request_method)\z/i
+
+    def resolve(uri)
+      settings = ENV.select { |name, _| PROXY_SETTING.match?(name) }
+      # @type var key: destination
+      key = [uri.scheme, uri.hostname, uri.port]
+      decision = @lock.synchronize { @entries[key] }
+      return decision[2] if decision && decision[0] == settings && decision[1] > monotonic_time
+
+      find_proxy(uri, settings).tap { |proxy| remember(key, settings, proxy) }
+    end
+
+    def initialize
+      @lock = Mutex.new
+      @entries = {}
+    end
+
+    private
+
+    def remember(key, settings, proxy)
+      @lock.synchronize do
+        @entries.delete(key)
+        @entries.shift if @entries.size >= MAX_ENTRIES
+        @entries[key] = [settings, monotonic_time + TTL, proxy]
+      end
+    end
+
+    def monotonic_time
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
+    def find_proxy(uri, settings)
+      # Use the case-insensitive environment lookup on Windows.
+      # @type var env: untyped
+      env = File::ALT_SEPARATOR ? ENV : settings
+      proxy = uri.find_proxy(env)
+      return proxy unless uri.scheme == 'https' && proxy.nil?
+
+      # Preserve the HTTP fallback for TLS while keeping the destination port for no_proxy.
+      URI::HTTP.new('http', nil, uri.host, uri.port, nil, nil, nil, nil, nil).find_proxy(env)
+    end
+  end
+
   class HttpSessionPool
     MAX_CONNECTIONS_PER_ORIGIN = 4
 
     def request(uri, &)
       raise ArgumentError, 'Expected an HTTP or HTTPS host' unless uri.hostname
 
-      proxy = find_proxy(uri)
+      proxy = @proxy_decisions.resolve(uri)
       raise "Unsupported proxy scheme: #{proxy.scheme}" if proxy && proxy.scheme != 'http'
 
       # @type var key: origin
@@ -62,17 +108,10 @@ module Irasutoya
       @lock = Mutex.new
       @available = ConditionVariable.new
       @sessions = {}
+      @proxy_decisions = ProxyDecisions.new
     end
 
     private
-
-    def find_proxy(uri)
-      proxy = uri.find_proxy
-      return proxy unless uri.scheme == 'https' && proxy.nil?
-
-      # Preserve the HTTP fallback for TLS while keeping the destination port for no_proxy.
-      URI::HTTP.new('http', nil, uri.host, uri.port, nil, nil, nil, nil, nil).find_proxy
-    end
 
     def abort_download(http, max_bytes)
       http.finish
@@ -218,6 +257,6 @@ module Irasutoya
   end
 
   Process.singleton_class.prepend(ForkCleanup) if Process.respond_to?(:_fork)
-  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :HttpSessionPool, :HttpSession, :HTTP_TRANSPORT,
-                   :ForkCleanup
+  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :ProxyDecisions, :HttpSessionPool, :HttpSession,
+                   :HTTP_TRANSPORT, :ForkCleanup
 end
