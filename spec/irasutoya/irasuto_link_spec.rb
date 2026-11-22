@@ -57,8 +57,18 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
     end
 
     context 'when there are multiple images on a page' do
-      before do
-        stub_page('show_multiple_images.html')
+      let(:page_http) { stub_page('show_multiple_images.html') }
+
+      it 'exposes the post categories in order without another request' do
+        categories = irasuto_link.fetch_irasuto.categories
+        titles = %w[メッセージ 医療 旅行]
+
+        expect(categories).to match(titles.map do |title|
+          an_instance_of(Irasutoya::Category).and(
+            have_attributes(title: title, list_url: "https://www.irasutoya.com/search/label/#{URI.encode_uri_component(title)}")
+          )
+        end)
+        expect(page_http).to have_received(:request_get).once
       end
 
       it 'should return irasuto (postthumb) with image_url' do

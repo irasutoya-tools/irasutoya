@@ -25,6 +25,10 @@ An `IrasutoLink` exposes `title`, `show_url`, and `thumbnail_url`. The thumbnail
 | `image_url` | The first image URL, or `nil` when there are no images. |
 | `has_multiple_images` | `true` when the post has more than one image. |
 | `postthumb_image_url` | The first image URL for a post with multiple images, or `nil` otherwise. |
+| `categories` | An array of `Category` objects in post order, or an empty array when the post has no category links. |
+
+Categories are read from the detail page with no additional request. Use
+`illustration.categories.first&.each_irasuto_link&.take(5)` to browse up to five illustrations in the first category.
 
 ## Fetch behavior
 

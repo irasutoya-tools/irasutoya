@@ -21,7 +21,7 @@ module Irasutoya
 
     def self.effective_url: (untyped, String) -> String
 
-    private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String] }
+    private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String], ?categories: Array[Category] }
     private def self.fetch_list_page: (String, Integer, ^(String) -> untyped) -> [untyped, String]?
     private def self.list_links: (
       untyped, String, ^(document: untyped) -> Array[{ title: String, show_url: String, ?thumbnail_url: String? }]
