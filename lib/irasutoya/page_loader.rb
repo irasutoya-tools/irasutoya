@@ -47,7 +47,7 @@ module Irasutoya
 
     def self.each_page_link(document, page_url, parse)
       parse.call(document: document).each do |parsed|
-        show_url = resolve_detail_href(page_url, parsed.fetch(:show_url))
+        show_url = resolve_trusted_href(page_url, parsed.fetch(:show_url))
         next unless show_url
 
         yield IrasutoLink.new(title: parsed.fetch(:title), show_url: show_url, thumbnail_url: parsed[:thumbnail_url])
@@ -83,9 +83,10 @@ module Irasutoya
 
     def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
-      without_fragment(URI.join(page_url, href).to_s) unless href.nil? || href.empty?
-    rescue URI::Error
-      nil
+      return if href.nil? || href.empty?
+
+      resolved_url = resolve_trusted_href(page_url, href)
+      without_fragment(resolved_url) if resolved_url
     end
     private_class_method :older_page_url
 
@@ -94,13 +95,13 @@ module Irasutoya
     end
     private_class_method :without_fragment
 
-    def self.resolve_detail_href(page_url, href)
+    def self.resolve_trusted_href(page_url, href)
       uri = URI.join(page_url, href)
       uri.to_s if Modules::HasDocumentFetcher.trusted_page_origin?(uri)
     rescue URI::Error
       nil
     end
-    private_class_method :resolve_detail_href
+    private_class_method :resolve_trusted_href
   end
 
   private_constant :PageLoader
