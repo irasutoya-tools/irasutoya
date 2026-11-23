@@ -49,7 +49,8 @@ module Irasutoya
     private def self.random_entry: (?refresh: bool) -> Hash[String, untyped]?
     private def self.cached_feed_count: -> Integer?
     private def self.feed_count: (bool) -> [Integer, Hash[String, untyped]?]
-    private def self.wait_for_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]
+    private def self.wait_for_current_feed_count: -> [Integer, Hash[String, untyped]]?
+    private def self.wait_for_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]?
     private def self.refresh_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]
     private def self.finish_feed_count_refresh: -> void
     private def self.fetch_feed_count: -> [Integer, Hash[String, untyped]]
