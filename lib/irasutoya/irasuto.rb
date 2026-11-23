@@ -142,8 +142,8 @@ module Irasutoya
         # Keep registration and cleanup atomic with respect to the fetch deadline.
         with_count_interrupt(:never) do
           pending = FEED_COUNT_LOCK.synchronize do
-            current = @feed_count_refresh
-            return wait_for_feed_count(current) if current && current.pid == Process.pid
+            result = wait_for_current_feed_count
+            return result if result
 
             count = cached_feed_count unless refresh
             return [count, nil] if count
@@ -154,11 +154,21 @@ module Irasutoya
         end
       end
 
+      def wait_for_current_feed_count
+        while (current = @feed_count_refresh) && current.pid == Process.pid
+          result = wait_for_feed_count(current)
+          return result if result
+        end
+        nil
+      end
+
       def wait_for_feed_count(refresh)
         with_count_interrupt(:immediate) do
           FEED_COUNT_READY.wait(FEED_COUNT_LOCK) while @feed_count_refresh.equal?(refresh)
         end
         error = refresh.error
+        return if error.is_a?(FetchDeadlineExceeded)
+
         raise error if error
 
         refresh.result || raise(IOError, 'Feed count refresh interrupted')
