@@ -37,4 +37,14 @@ RSpec.describe Irasutoya::Category do
     expect(category.fetch_irasuto_links.map(&:title)).to eq(['Sleeping cat'])
     expect(http).not_to have_received(:request_get).with(next_path)
   end
+
+  it 'yields the current category results and stops at an off-origin older link' do
+    html = File.read('spec/files/category_first_page.html')
+    html = html.sub(/href="\?[^"]+"/, 'href="//example.com/search/label/cat"')
+    stub_html(http, html, path: first_path)
+
+    expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
+    expect(http).to have_received(:request_get).with(first_path).once
+    expect(http).to have_received(:request_get).once
+  end
 end
