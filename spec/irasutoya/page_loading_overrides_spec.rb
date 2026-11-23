@@ -12,7 +12,7 @@ RSpec.describe 'Page loading overrides' do
 
       expect(links).to contain_exactly(
         an_instance_of(Irasutoya::IrasutoLink).and(have_attributes(title: 'Custom link', show_url: detail_url,
-                                                               thumbnail_url: nil))
+                                                                   thumbnail_url: nil))
       )
     end
   end
@@ -99,7 +99,7 @@ RSpec.describe 'Page loading overrides' do
     before do
       feed_url = 'https://www.irasutoya.com/feeds/posts/summary?start-index=1&max-results=1&alt=json-in-script'
       allow(Irasutoya::ResponseFetcher).to receive(:get).with(feed_url, max_bytes: 1024 * 1024, follow_redirects: false)
-                                                      .and_return([File.read('spec/files/posts_summary.jsonp'), nil])
+                                                        .and_return([File.read('spec/files/posts_summary.jsonp'), nil])
       allow(Random).to receive(:rand).with(22_312).and_return(0)
     end
 

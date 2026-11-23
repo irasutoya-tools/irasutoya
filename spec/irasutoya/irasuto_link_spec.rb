@@ -47,11 +47,11 @@ RSpec.describe Irasutoya::IrasutoLink do # rubocop:disable Metrics/BlockLength
       it 'exposes only valid HTTP and HTTPS images in document order' do
         irasuto = irasuto_link.fetch_irasuto
         expect(irasuto.image_urls).to eq(%w[
-          https://www.irasutoya.com/images/root.png
-          https://www.irasutoya.com/2026/images/path.png
-          https://cdn.example.com/protocol.png
-          http://cdn.example.com:80/absolute.png
-        ])
+                                           https://www.irasutoya.com/images/root.png
+                                           https://www.irasutoya.com/2026/images/path.png
+                                           https://cdn.example.com/protocol.png
+                                           http://cdn.example.com:80/absolute.png
+                                         ])
         expect(irasuto.image_url).to eq('https://www.irasutoya.com/images/root.png')
       end
     end

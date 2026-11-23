@@ -45,7 +45,8 @@ RSpec.describe 'Illustration fetch deadlines' do
     html = File.read('spec/files/show.html')
     stub_const('Irasutoya::Modules::HasDocumentFetcher::MAX_HTML_BYTES', html.bytesize)
     stream = lambda do |socket|
-      socket.write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", "#{(html.bytesize + 1).to_s(16)}\r\n", html, '!')
+      socket.write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", "#{(html.bytesize + 1).to_s(16)}\r\n",
+                   html, '!')
       socket.read
     end
     serve(stream, response('200 OK', body: html, delay: 0))

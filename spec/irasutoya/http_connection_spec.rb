@@ -51,7 +51,7 @@ RSpec.describe 'Illustration HTTP connections' do
   before do
     allow(Net::HTTP).to receive(:new).and_call_original
     allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, nil, nil, nil, nil)
-                                    .and_wrap_original do |new_http, *|
+                                     .and_wrap_original do |new_http, *|
       http = new_http.call('127.0.0.1', listener.addr[1], nil)
       allow(http).to receive(:use_ssl=).with(true)
       http
@@ -83,7 +83,7 @@ RSpec.describe 'Illustration HTTP connections' do
 
     before do
       allow(Net::HTTP).to receive(:new).with('www.irasutoya.com', 443, nil, nil, nil, nil)
-                                      .and_wrap_original do |new_http, *|
+                                       .and_wrap_original do |new_http, *|
         http = new_http.call('127.0.0.1', listener.addr[1], nil)
         http.cert_store = OpenSSL::X509::Store.new.tap { |store| store.add_cert(certificate) }
         http
@@ -98,8 +98,8 @@ RSpec.describe 'Illustration HTTP connections' do
                             })
       stub_const('Irasutoya::Irasuto::MAX_FEED_BYTES', entry.bytesize)
       allow(Random).to receive(:rand).with(2).and_return(1)
-      expect(self).to receive(:response_for).with(count_path).ordered
-                                           .and_return(http_response('200 OK', '{"feed":{"openSearch$totalResults":{"$t":"2"}}}'))
+      count_response = http_response('200 OK', '{"feed":{"openSearch$totalResults":{"$t":"2"}}}')
+      expect(self).to receive(:response_for).with(count_path).ordered.and_return(count_response)
       expect(self).to receive(:response_for).with(entry_path).ordered.and_return(http_response('200 OK', entry))
       html = File.read('spec/files/show.html')
       expect(self).to receive(:response_for).with('/detail').ordered.and_return(http_response('200 OK', html))
@@ -157,7 +157,7 @@ RSpec.describe 'Illustration HTTP connections' do
 
       it 'uses the same proxy for feed and detail requests' do
         expect(self).to receive(:response_for).with('www.irasutoya.com:443').twice
-                                             .and_return(http_response('502 Bad Gateway', ''))
+                                              .and_return(http_response('502 Bad Gateway', ''))
 
         expect { fetch_feed }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
         expect { fetch_detail('/detail') }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
@@ -195,7 +195,7 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(fetch_detail('/direct').title).to eq('/direct')
     ENV['no_proxy'] = 'www.irasutoya.com:80'
     allow(self).to receive(:response_for).with('www.irasutoya.com:443')
-                                        .and_return(http_response('502 Bad Gateway', ''))
+                                         .and_return(http_response('502 Bad Gateway', ''))
 
     expect { fetch_detail('/proxied') }.to raise_error(Net::HTTPFatalError, /502.*Bad Gateway/)
     expect(IPSocket).to have_received(:getaddress).with('www.irasutoya.com').twice
@@ -352,7 +352,8 @@ RSpec.describe 'Illustration HTTP connections' do
     pool = Irasutoya.const_get(:HttpSessionPool).new
     slow_fetch = Thread.new { pool.request(URI.parse("#{origin}/slow")) { |_, response| response.read_body } }
     requests.pop
-    expect(pool.request(URI.parse("#{other_origin}/fast")) { |_, response| response.read_body }.body).to include('/fast')
+    fast_response = pool.request(URI.parse("#{other_origin}/fast")) { |_, response| response.read_body }
+    expect(fast_response.body).to include('/fast')
     release_response << true
     expect(slow_fetch.value.body).to include('/slow')
   ensure
@@ -435,7 +436,8 @@ RSpec.describe 'Illustration HTTP connections' do
   end
 
   def http_response(status, body, charset = 'UTF-8')
-    "HTTP/1.1 #{status}\r\nContent-Type: text/html; charset=#{charset}\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}"
+    "HTTP/1.1 #{status}\r\nContent-Type: text/html; charset=#{charset}\r\n" \
+      "Content-Length: #{body.bytesize}\r\n\r\n#{body}"
   end
 
   def unfinished_redirect(target)
