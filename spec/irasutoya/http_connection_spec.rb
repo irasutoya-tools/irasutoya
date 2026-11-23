@@ -302,6 +302,20 @@ RSpec.describe 'Illustration HTTP connections' do
     expect(requests.size).to eq(2)
   end
 
+  it 'rejects an oversized header line with an empty body' do
+    headers = "X-Large: #{'a' * (1024 * 1024)}\r\n"
+    allow(self).to receive(:response_for).with('/detail').and_return(empty_response(headers))
+
+    expect { fetch_detail('/detail') }.to raise_error(Net::HTTPBadResponse, 'response line too long')
+  end
+
+  it 'rejects an oversized header block made of individually short lines with an empty body' do
+    headers = Array.new(256) { |index| "X-Large-#{index}: #{'a' * 4096}\r\n" }.join
+    allow(self).to receive(:response_for).with('/feed').and_return(empty_response(headers))
+
+    expect { fetch_feed }.to raise_error(Net::HTTPBadResponse, 'response header too large')
+  end
+
   it 'resolves relative image URLs against the redirect destination directory' do
     illustration = fetch_detail('/legacy/item.html')
     image_url = "#{trusted_origin}/2024/08/art.png"
@@ -416,5 +430,9 @@ RSpec.describe 'Illustration HTTP connections' do
 
   def unfinished_redirect(target)
     "HTTP/1.1 302 Found\r\nLocation: #{target}\r\nTransfer-Encoding: chunked\r\n\r\n1\r\na\r\n"
+  end
+
+  def empty_response(headers)
+    "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n#{headers}\r\n"
   end
 end
