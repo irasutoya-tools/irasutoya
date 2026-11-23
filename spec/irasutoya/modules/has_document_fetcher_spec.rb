@@ -95,7 +95,8 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
     first_redirect = redirect_to('?page=2')
     final_redirect = redirect_to('http://WWW.IRASUTOYA.COM:80/page#fragment')
     expect(http).to receive(:request_get).with('/page').ordered.and_yield(first_redirect).and_return(first_redirect)
-    expect(http).to receive(:request_get).with('/page?page=2').ordered.and_yield(final_redirect).and_return(final_redirect)
+    expect(http).to receive(:request_get).with('/page?page=2').ordered
+                                         .and_yield(final_redirect).and_return(final_redirect)
 
     expect { fetch_page(page_url) }.to raise_error(IOError, 'Irasutoya page redirect cycle detected')
   end
