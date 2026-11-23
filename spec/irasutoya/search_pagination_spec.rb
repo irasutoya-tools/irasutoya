@@ -59,6 +59,34 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  context 'when the older link only adds a fragment' do
+    before do
+      stub_search_page(search_uri, first_results, '#older')
+    end
+
+    it 'returns no results for the next page after one request' do
+      expect(described_class.search(query: query, page: 1)).to eq([])
+      expect(page_http).to have_received(:request_get).once
+    end
+
+    it 'yields only the current page after one request' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+      expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+      expect(page_http).to have_received(:request_get).once
+    end
+  end
+
+  it 'fetches the older page with its new query and without the fragment' do
+    stub_search_page(search_uri, first_results, "#{next_href}#older")
+    allow(described_class).to receive(:fetch_page_and_parse).and_call_original
+    expected_urls = next_results.map { |path| URI.join(next_url, path).to_s }
+
+    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
+    expect(described_class).to have_received(:fetch_page_and_parse).with(next_url).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
   it 'returns an empty array without another request when the older link is malformed' do
     stub_search_page(search_uri, first_results, 'https://[bad]/search')
 

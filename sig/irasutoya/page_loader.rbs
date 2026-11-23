@@ -29,6 +29,7 @@ module Irasutoya
     private def self.each_page_link: (untyped, String, list_parser) { (IrasutoLink) -> void } -> void
     private def self.each_list_page: (String, ^(String) -> untyped) { (untyped, String) -> void } -> void
     private def self.older_page_url: (untyped, String) -> String?
+    private def self.without_fragment: (String) -> String
     private def self.resolve_detail_href: (String, String) -> String?
   end
 end
