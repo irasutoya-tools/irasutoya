@@ -4,11 +4,26 @@ require 'rbs'
 
 RSpec.describe 'Irasutoya::Irasuto class method signatures' do
   let(:irasuto) { Irasutoya::Irasuto }
-  let(:methods) do
+  let(:builder) do
     loader = RBS::EnvironmentLoader.new
     loader.add(path: Pathname(__dir__).join('../../sig'))
     environment = RBS::Environment.from_loader(loader).resolve_type_names
-    RBS::DefinitionBuilder.new(env: environment).build_singleton(RBS::TypeName.parse('::Irasutoya::Irasuto')).methods
+    RBS::DefinitionBuilder.new(env: environment)
+  end
+  let(:methods) { builder.build_singleton(RBS::TypeName.parse('::Irasutoya::Irasuto')).methods }
+
+  it 'allows list parser overrides to omit the thumbnail URL' do
+    expect(list_entry_type(return_type(:parse_list_page)).optional_fields).to have_key(:thumbnail_url)
+  end
+
+  it 'allows list dispatch to forward overrides that omit the thumbnail URL' do
+    array_type = return_type(:list_page_entries).types.find { |type| type.name.to_s == '::Array' }
+
+    expect(list_entry_type(array_type).optional_fields).to have_key(:thumbnail_url)
+  end
+
+  it 'allows detail parser overrides to omit categories' do
+    expect(return_type(:parse_show_page).optional_fields).to have_key(:categories)
   end
 
   it 'keeps the random helpers private in Ruby and RBS' do
@@ -23,5 +38,13 @@ RSpec.describe 'Irasutoya::Irasuto class method signatures' do
 
     expect(irasuto.public_methods).to include(*entry_points)
     expect(methods.fetch_values(*entry_points).map(&:accessibility)).to eq(%i[public public])
+  end
+
+  def return_type(method_name)
+    methods.fetch(method_name).method_types.fetch(0).type.return_type
+  end
+
+  def list_entry_type(array_type)
+    builder.expand_alias(array_type.args.fetch(0).name)
   end
 end

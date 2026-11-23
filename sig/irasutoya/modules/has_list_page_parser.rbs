@@ -6,8 +6,8 @@ module Irasutoya
       type card = { title: String, show_url: String, thumbnail_url: String? }
 
       module Methods
-        def parse_list_page: (document: untyped) -> Array[card]
-        private def list_page_entries: (document: untyped) -> (Array[card] | Enumerator::Lazy[card, untyped])
+        def parse_list_page: (document: untyped) -> Array[PageLoader::list_entry]
+        private def list_page_entries: (document: untyped) -> (Array[PageLoader::list_entry] | Enumerator::Lazy[card, untyped])
         private def list_page_cards: (document: untyped) -> Enumerator::Lazy[card, untyped]
       end
 
