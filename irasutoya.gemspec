@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'cgi'
+  spec.add_dependency 'net-http', '>= 0.10.0'
   spec.add_dependency 'nokogiri'
 
   spec.add_development_dependency 'base64'
