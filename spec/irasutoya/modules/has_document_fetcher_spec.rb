@@ -82,10 +82,31 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
     expect { fetch_page(page_url) }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
   end
 
-  it 'bounds redirect loops' do
+  it 'detects a self-redirect after one request' do
     http = stub_page_http
-    redirect = redirect_to('/page')
-    expect(http).to receive(:request_get).exactly(11).times.and_yield(redirect).and_return(redirect)
+    redirect = redirect_to('#fragment')
+    expect(http).to receive(:request_get).with('/page').once.and_yield(redirect).and_return(redirect)
+
+    expect { fetch_page(page_url) }.to raise_error(IOError, 'Irasutoya page redirect cycle detected')
+  end
+
+  it 'detects a cycle across two URLs after two requests' do
+    http = stub_page_http
+    first_redirect = redirect_to('?page=2')
+    final_redirect = redirect_to('http://WWW.IRASUTOYA.COM:80/page#fragment')
+    expect(http).to receive(:request_get).with('/page').ordered.and_yield(first_redirect).and_return(first_redirect)
+    expect(http).to receive(:request_get).with('/page?page=2').ordered.and_yield(final_redirect).and_return(final_redirect)
+
+    expect { fetch_page(page_url) }.to raise_error(IOError, 'Irasutoya page redirect cycle detected')
+  end
+
+  it 'limits a chain of distinct redirect URLs to eleven requests' do
+    http = stub_page_http
+    11.times do |index|
+      path = index.zero? ? '/page' : "/page/#{index}"
+      redirect = redirect_to("/page/#{index + 1}")
+      expect(http).to receive(:request_get).with(path).ordered.and_yield(redirect).and_return(redirect)
+    end
 
     expect { fetch_page(page_url) }.to raise_error(IOError, 'Too many Irasutoya page redirects')
   end
