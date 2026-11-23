@@ -111,15 +111,14 @@ module Irasutoya
 
       def alternate_url(entry)
         links = entry&.[]('link')
-        link = links&.find { |candidate| candidate['rel'] == 'alternate' && http_url?(candidate['href']) }
+        link = links&.find { |candidate| candidate['rel'] == 'alternate' && trusted_feed_url?(candidate['href']) }
         link&.fetch('href')
       end
 
-      def http_url?(url)
+      def trusted_feed_url?(url)
         return false unless url.is_a?(String)
 
-        uri = URI.parse(url)
-        uri.is_a?(URI::HTTP) && !uri.host.to_s.empty?
+        Modules::HasDocumentFetcher.trusted_page_origin?(URI.parse(url))
       rescue URI::Error
         false
       end

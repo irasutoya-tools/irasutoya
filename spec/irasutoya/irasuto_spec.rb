@@ -355,11 +355,35 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(page_http).to have_received(:request_get).with(URI.parse(show_url).request_uri).once
     end
 
-    it 'rejects an off-origin feed link before requesting a detail page' do
-      allow(feed_response).to receive(:read_body).and_yield(feed_body.gsub('www.irasutoya.com', 'example.com'))
-      expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
+    context 'when the selected feed entry has an off-origin alternate URL' do
+      let(:feed_count) { 1 }
+      let(:off_origin_url) { 'https://example.org/post.html' }
+      let(:feed_body) do
+        feed = {
+          'openSearch$totalResults' => { '$t' => '1' },
+          'entry' => [{ 'link' => [{ 'rel' => 'alternate', 'href' => off_origin_url }] }]
+        }
+        "callback(#{JSON.generate('feed' => feed)});"
+      end
 
-      expect { Irasutoya::Irasuto.random }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
+      before do
+        expect(Net::HTTP).not_to receive(:new).with('example.org', any_args)
+      end
+
+      it 'loads the trusted post from the refreshed feed' do
+        refreshed_response = jsonp_response(feed_body.sub(off_origin_url, show_url))
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(refreshed_response)
+        expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).ordered
+
+        expect(described_class.random.url).to eq(show_url)
+      end
+
+      it 'reports the feed error after two off-origin selections' do
+        expect(page_http).to receive(:request_get).with(feed_path(1)).twice.and_yield(feed_response)
+
+        expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no usable post URL')
+      end
     end
 
     it 'should return random irasuto with title' do
