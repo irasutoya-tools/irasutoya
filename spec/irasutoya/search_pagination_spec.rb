@@ -59,6 +59,32 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  context 'when the older link points off-origin' do
+    before do
+      stub_search_page(search_uri, first_results, 'https://example.com/search?q=cat')
+    end
+
+    it 'returns an empty array for the next page' do
+      expect(described_class.search(query: query, page: 1)).to eq([])
+      expect(page_http).to have_received(:request_get).once
+    end
+
+    it 'yields the current results and finishes enumeration' do
+      expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
+
+      expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+      expect(page_http).to have_received(:request_get).once
+    end
+  end
+
+  it 'follows an absolute older link on the trusted origin' do
+    stub_search_page(search_uri, first_results, next_url)
+    expected_urls = next_results.map { |path| URI.join(next_url, path).to_s }
+
+    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
   context 'when the older link only adds a fragment' do
     before do
       stub_search_page(search_uri, first_results, '#older')
