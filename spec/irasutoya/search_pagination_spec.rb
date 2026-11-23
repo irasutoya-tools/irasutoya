@@ -29,8 +29,8 @@ RSpec.describe Irasutoya::Irasuto do
     links = described_class.search(query: query, page: 1)
 
     expect(links.map(&:show_url)).to eq(%w[
-      https://www.irasutoya.com/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html
-    ])
+                                          https://www.irasutoya.com/2018/09/blog-post_34.html https://www.irasutoya.com/2018/09/cat-9.html
+                                        ])
     expect(links.map(&:thumbnail_url)).to eq([thumbnail_url, thumbnail_url])
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
@@ -59,21 +59,21 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
-  context 'when the older link points to another origin' do
+  context 'when the older link points off-origin' do
     before do
       stub_search_page(search_uri, first_results, 'https://example.com/search?q=cat')
     end
 
-    it 'returns an empty array for the requested page' do
+    it 'returns an empty array for the next page' do
       expect(described_class.search(query: query, page: 1)).to eq([])
-      expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+      expect(page_http).to have_received(:request_get).once
     end
 
     it 'yields the current results and finishes enumeration' do
       expected_urls = first_results.map { |path| URI.join(search_url, path).to_s }
 
-      expect(described_class.each_search_result(query: query).to_a.map(&:show_url)).to eq(expected_urls)
-      expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+      expect(described_class.each_search_result(query: query).map(&:show_url)).to eq(expected_urls)
+      expect(page_http).to have_received(:request_get).once
     end
   end
 
@@ -158,10 +158,12 @@ RSpec.describe Irasutoya::Irasuto do
     end
     expect(Irasutoya::IrasutoLink).to receive(:new).once.and_call_original
 
-    expect(described_class.each_search_result(query: query).take(1)).to match([
-      have_attributes(title: 'Cat', show_url: URI.join(search_url, first_results.first).to_s,
-                      thumbnail_url: thumbnail_url)
-    ])
+    first_result = have_attributes(
+      title: 'Cat',
+      show_url: URI.join(search_url, first_results.first).to_s,
+      thumbnail_url: thumbnail_url
+    )
+    expect(described_class.each_search_result(query: query).take(1)).to match([first_result])
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
@@ -270,9 +272,11 @@ RSpec.describe Irasutoya::Irasuto do
     end
 
     it 'fetches the older page relative to the redirected page and returns its results' do
-      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(%w[
-        https://www.irasutoya.com/archive/cats/cat-8.html https://www.irasutoya.com/2018/09/cat-9.html
-      ])
+      expected_urls = %w[
+        https://www.irasutoya.com/archive/cats/cat-8.html
+        https://www.irasutoya.com/2018/09/cat-9.html
+      ]
+      expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
       expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
       expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
     end
@@ -281,8 +285,8 @@ RSpec.describe Irasutoya::Irasuto do
       results = described_class.each_search_result(query: query).drop(first_results.size)
 
       expect(results.map(&:show_url)).to eq(%w[
-        https://www.irasutoya.com/archive/cats/cat-8.html https://www.irasutoya.com/2018/09/cat-9.html
-      ])
+                                              https://www.irasutoya.com/archive/cats/cat-8.html https://www.irasutoya.com/2018/09/cat-9.html
+                                            ])
       expect(page_http).to have_received(:request_get).with(first_page_uri.request_uri).once
       expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
     end

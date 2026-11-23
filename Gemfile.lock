@@ -3,6 +3,7 @@ PATH
   specs:
     irasutoya (2.0.4)
       cgi
+      net-http (>= 0.10.0)
       nokogiri
 
 GEM
@@ -52,6 +53,11 @@ GEM
     method_source (1.1.0)
     mini_portile2 (2.8.9)
     nenv (0.3.0)
+    net-http (0.10.0)
+      net-protocol (>= 0.3.0)
+      uri (>= 0.11.1)
+    net-protocol (0.4.0)
+      timeout
     nokogiri (1.19.7)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
@@ -136,6 +142,7 @@ GEM
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
     thor (1.5.0)
+    timeout (0.6.1)
     tsort (0.2.0)
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)

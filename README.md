@@ -49,6 +49,7 @@ From the directory where you saved the script, run `bundle exec ruby find_illust
 
 ## Usage
 
+See [Getting started](docs/getting-started.md) for a walkthrough from search results to illustration details.
 See the [Ruby API reference](docs/usage.md) for pagination, return values, and fetch behavior.
 See [Troubleshooting](docs/troubleshooting.md) for empty results and fetch errors.
 

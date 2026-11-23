@@ -45,11 +45,12 @@ module Irasutoya
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]
     private def self.random_url: -> String
     private def self.alternate_url: (Hash[String, untyped]?) -> String?
-    private def self.http_url?: (untyped) -> bool
+    private def self.trusted_feed_url?: (untyped) -> bool
     private def self.random_entry: (?refresh: bool) -> Hash[String, untyped]?
     private def self.cached_feed_count: -> Integer?
     private def self.feed_count: (bool) -> [Integer, Hash[String, untyped]?]
-    private def self.wait_for_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]
+    private def self.wait_for_current_feed_count: -> [Integer, Hash[String, untyped]]?
+    private def self.wait_for_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]?
     private def self.refresh_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]
     private def self.finish_feed_count_refresh: -> void
     private def self.fetch_feed_count: -> [Integer, Hash[String, untyped]]

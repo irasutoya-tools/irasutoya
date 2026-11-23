@@ -85,8 +85,8 @@ module Irasutoya
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
       return if href.nil? || href.empty?
 
-      resolved_url = resolve_trusted_href(page_url, href)
-      without_fragment(resolved_url) if resolved_url
+      url = resolve_trusted_href(page_url, href)
+      without_fragment(url) if url
     end
     private_class_method :older_page_url
 

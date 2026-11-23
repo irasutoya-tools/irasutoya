@@ -95,6 +95,28 @@ RSpec.describe Irasutoya::Irasuto, 'concurrent random feed counts' do
     expect(described_class.random.url).to eq(show_url)
   end
 
+  it 'lets current waiters share one replacement when the initiating deadline expires' do
+    deadline = Irasutoya.const_get(:FetchDeadlineExceeded)
+    block_count_request do |error|
+      raise error if error
+
+      [feed, nil]
+    end
+    leader = start_refresh
+    followers = Array.new(3) { start_waiter }
+
+    @release_count << deadline.new('execution expired')
+    expect(result(leader)).to be_a(Timeout::Error)
+    pop(@count_requests)
+
+    stub_const('Irasutoya::Modules::HasDocumentFetcher::FETCH_TIMEOUT', 0.1)
+    expect(result(start_worker)).to be_a(Timeout::Error)
+
+    @release_count << nil
+    expect(followers.map { |worker| result(worker).url }).to eq([show_url] * 3)
+    expect(@count_requests).to be_empty
+  end
+
   it 'lets a waiting caller reach its own deadline without cancelling the refresh' do
     block_count_request { [feed, nil] }
     leader = start_refresh
@@ -110,8 +132,7 @@ RSpec.describe Irasutoya::Irasuto, 'concurrent random feed counts' do
   def block_count_request
     allow(Irasutoya::ResponseFetcher).to receive(:get).with(count_url, any_args) do
       @count_requests << true
-      @release_count.pop
-      yield
+      yield @release_count.pop
     end
   end
 

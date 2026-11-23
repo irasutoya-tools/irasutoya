@@ -44,12 +44,14 @@ module Irasutoya
         MAX_REDIRECTS = 10
 
         def open(uri, &)
-          fetch_page(trusted_page_uri(uri), MAX_REDIRECTS, &)
+          fetch_page(trusted_page_uri(uri), MAX_REDIRECTS, Set.new, &)
         end
 
         private
 
-        def fetch_page(uri, redirects_left, &)
+        def fetch_page(uri, redirects_left, visited, &)
+          raise IOError, 'Irasutoya page redirect cycle detected' unless visited.add?(uri.request_uri)
+
           response = request(uri)
           document = response_document(uri, response)
           return yield document if response.is_a?(Net::HTTPSuccess)
@@ -58,7 +60,7 @@ module Irasutoya
           document.close
           raise IOError, 'Too many Irasutoya page redirects' if redirects_left.zero?
 
-          fetch_page(trusted_page_uri(target), redirects_left - 1, &)
+          fetch_page(trusted_page_uri(target), redirects_left - 1, visited, &)
         end
 
         def request(uri)

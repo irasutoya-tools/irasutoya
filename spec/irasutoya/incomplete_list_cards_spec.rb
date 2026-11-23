@@ -3,6 +3,7 @@
 RSpec.describe 'Listings with incomplete result cards' do
   let(:expected) do
     [
+      ['Kitten', 'https://www.irasutoya.com/2018/09/kitten.html', 'https://example.com/kitten.png'],
       ['Mouse', 'https://www.irasutoya.com/2018/09/mouse.html', 'https://example.com/mouse.png'],
       ['Bird', 'https://www.irasutoya.com/2018/09/bird.html', nil]
     ]

@@ -30,9 +30,9 @@ module Irasutoya
       module PrivateMethods
         class << self
           def parse_card(box:)
-            anchors = box.css('a')
-            title = anchors[1]&.text
-            show_url = anchors.first&.[]('href')
+            title_link, destination_link = card_links(box: box)
+            title = title_link&.text
+            show_url = destination_link&.[]('href')
             return if title.to_s.strip.empty? || show_url.to_s.strip.empty?
 
             { title: title, show_url: show_url, thumbnail_url: thumbnail_url_from(box: box) }
@@ -45,6 +45,16 @@ module Irasutoya
             url if url && URI.parse(url).host
           rescue URI::InvalidURIError
             nil
+          end
+
+          private
+
+          def card_links(box:)
+            heading_link = box.at_css('.boxmeta h2 a')
+            return [heading_link, heading_link] if heading_link
+
+            anchors = box.css('a')
+            [anchors[1], anchors.first]
           end
         end
       end
