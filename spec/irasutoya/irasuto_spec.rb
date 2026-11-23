@@ -362,6 +362,21 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { Irasutoya::Irasuto.random }.to raise_error(ArgumentError, 'Untrusted Irasutoya page URL')
     end
 
+    it 'uses the next alternate link when the first has a malformed URL' do
+      feed = {
+        'openSearch$totalResults' => { '$t' => feed_count.to_s },
+        'entry' => [{ 'link' => [
+          { 'rel' => 'alternate', 'href' => 'https://www.irasutoya.com/invalid path.html' },
+          { 'rel' => 'alternate', 'href' => show_url }
+        ] }]
+      }
+      response = jsonp_response("callback(#{JSON.generate('feed' => feed)});")
+      expect(page_http).to receive(:request_get).with(feed_path(1)).once.ordered.and_yield(response).and_return(response)
+      expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).once.ordered
+
+      expect(described_class.random.url).to eq(show_url)
+    end
+
     it 'should return random irasuto with title' do
       expect(Irasutoya::Irasuto.random.title).to eq('太った少年のイラスト（肥満）')
     end
