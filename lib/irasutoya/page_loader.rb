@@ -66,12 +66,13 @@ module Irasutoya
     private_class_method :fetch_list_page
 
     def self.each_list_page(url, fetch)
+      url = without_fragment(url)
       visited = Set.new
       while url && visited.add?(url)
         document = fetch.call(url)
         break unless document
 
-        page_url = effective_url(document, url)
+        page_url = without_fragment(effective_url(document, url))
         break if page_url != url && !visited.add?(page_url)
 
         yield document, page_url
@@ -82,11 +83,16 @@ module Irasutoya
 
     def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
-      URI.join(page_url, href).to_s unless href.nil? || href.empty?
+      without_fragment(URI.join(page_url, href).to_s) unless href.nil? || href.empty?
     rescue URI::Error
       nil
     end
     private_class_method :older_page_url
+
+    def self.without_fragment(url)
+      url.partition('#').first
+    end
+    private_class_method :without_fragment
 
     def self.resolve_detail_href(page_url, href)
       uri = URI.join(page_url, href)
