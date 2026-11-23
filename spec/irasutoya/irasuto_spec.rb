@@ -422,15 +422,15 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
 
     include_examples 'ordered list results'
 
-    it 'queries anchors once in each of the twenty result boxes' do
+    it 'queries the post heading once in each of the twenty result boxes' do
       allow(Nokogiri::HTML).to receive(:parse).and_wrap_original do |parse, *args|
         document = parse.call(*args)
         boxes = document.css('.box')
         expect(boxes.size).to eq(20)
         allow(document).to receive(:css).with('.box').and_return(boxes)
         boxes.each do |box|
-          allow(box).to receive(:css).and_call_original
-          expect(box).to receive(:css).with('a').once.and_call_original
+          allow(box).to receive(:at_css).and_call_original
+          expect(box).to receive(:at_css).with('.boxmeta h2 a').once.and_call_original
         end
         document
       end
