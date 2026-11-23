@@ -14,12 +14,15 @@ bundle install --jobs 4
 
 ## Run the checks
 
-Run the same test and lint commands used by [CI](.github/workflows/test.yml).
+Run the same tests, lint, and formatting checks used by [CI](.github/workflows/test.yml).
 
 ```sh
 bundle exec rspec
 bundle exec rubocop lib
+bundle exec rubocop --only Layout
 ```
+
+Run `bundle exec rubocop --fix-layout` to apply Ruby formatting corrections.
 
 The scraping specs use saved HTML and feed responses in [`spec/files/`](spec/files/). When changing a parser, update or add a fixture and a spec if needed to cover the behavior.
 

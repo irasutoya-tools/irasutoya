@@ -8,7 +8,8 @@ RSpec.describe 'Release workflow' do
     ruby_version = File.read(File.join(root, '.ruby-version')).strip
     release = YAML.safe_load_file(File.join(root, '.github/workflows/release.yaml'))
     ci = YAML.safe_load_file(File.join(root, '.github/workflows/test.yml'))
-    setup = release.fetch('jobs').fetch('push').fetch('steps').find { |step| step['uses']&.start_with?('ruby/setup-ruby@') }
+    steps = release.fetch('jobs').fetch('push').fetch('steps')
+    setup = steps.find { |step| step['uses']&.start_with?('ruby/setup-ruby@') }
     tested_versions = ci.dig('jobs', 'test', 'strategy', 'matrix', 'ruby')
 
     expect(setup.dig('with', 'ruby-version')).to eq('.ruby-version')

@@ -20,9 +20,9 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       stub_page('show_with_padded_image_sources.html')
 
       expect(described_class.from_url('https://www.irasutoya.com/2014/03/blog-post.html').image_urls).to eq(%w[
-        https://www.irasutoya.com/2014/03/cat.png
-        https://www.irasutoya.com/2014/03/second.png
-      ])
+                                                                                                              https://www.irasutoya.com/2014/03/cat.png
+                                                                                                              https://www.irasutoya.com/2014/03/second.png
+                                                                                                            ])
     end
 
     it 'skips a leading one-pixel Blogger placeholder and keeps illustrations in order' do
@@ -155,14 +155,16 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     end
 
     it 'returns the first entry for a draw of zero without requesting index zero' do
-      expect(page_http).to receive(:request_get).with(feed_path(1)).once.and_yield(feed_response).and_return(feed_response)
+      expect(page_http).to receive(:request_get).with(feed_path(1)).once
+                                                .and_yield(feed_response).and_return(feed_response)
 
       expect(described_class.random.url).to eq(show_url)
     end
 
     it 'requests the last reported index for the highest draw' do
       allow(Random).to receive(:rand).with(feed_count).and_return(feed_count - 1)
-      expect(page_http).to receive(:request_get).with(feed_path(feed_count)).and_yield(feed_response).and_return(feed_response)
+      expect(page_http).to receive(:request_get).with(feed_path(feed_count))
+                                                .and_yield(feed_response).and_return(feed_response)
 
       expect(described_class.random.url).to eq(show_url)
     end
@@ -191,9 +193,9 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     it 'makes one feed request and one detail request with a fresh count' do
       allow(Random).to receive(:rand).with(feed_count).and_return(0, 1)
       expect(page_http).to receive(:request_get).with(feed_path(1)).once
-                                   .and_yield(feed_response).and_return(feed_response)
+                                                .and_yield(feed_response).and_return(feed_response)
       expect(page_http).to receive(:request_get).with(feed_path(2)).once
-                                   .and_yield(feed_response).and_return(feed_response)
+                                                .and_yield(feed_response).and_return(feed_response)
 
       expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).twice
 
@@ -207,10 +209,10 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       allow(described_class).to receive(:feed_count_time).and_return(400.0)
       updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
       expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
-                                   .and_yield(updated_response).and_return(updated_response)
+                                                .and_yield(updated_response).and_return(updated_response)
       expect(Random).to receive(:rand).with(2).ordered.and_return(1)
       expect(page_http).to receive(:request_get).with(feed_path(2)).ordered
-                                   .and_yield(updated_response).and_return(updated_response)
+                                                .and_yield(updated_response).and_return(updated_response)
 
       expect(described_class.random.url).to eq(show_url)
     end
@@ -222,12 +224,12 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       missing_entry = jsonp_response('callback({"feed":{"openSearch$totalResults":{"$t":"2"}}});')
       updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
       expect(page_http).to receive(:request_get).with(feed_path(feed_count)).ordered
-                                   .and_yield(missing_entry).and_return(missing_entry)
+                                                .and_yield(missing_entry).and_return(missing_entry)
       expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
-                                   .and_yield(updated_response).and_return(updated_response)
+                                                .and_yield(updated_response).and_return(updated_response)
       expect(Random).to receive(:rand).with(2).ordered.twice.and_return(0, 1)
       expect(page_http).to receive(:request_get).with(feed_path(2)).ordered
-                                   .and_yield(updated_response).and_return(updated_response)
+                                                .and_yield(updated_response).and_return(updated_response)
 
       2.times { expect(described_class.random.url).to eq(show_url) }
     end
@@ -300,7 +302,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     end
 
     it 'reports an empty feed without choosing an index or fetching a detail page' do
-      allow(feed_response).to receive(:read_body).and_yield('callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});')
+      empty_feed = 'callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});'
+      allow(feed_response).to receive(:read_body).and_yield(empty_feed)
       expect(Random).not_to receive(:rand).with(0)
       expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
 
@@ -311,9 +314,9 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       empty_response = jsonp_response('callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});')
       recovered_response = jsonp_response(feed_body.sub(feed_count.to_s, '1'))
       expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
-                                   .and_yield(empty_response).and_return(empty_response)
+                                                .and_yield(empty_response).and_return(empty_response)
       expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
-                                   .and_yield(recovered_response).and_return(recovered_response)
+                                                .and_yield(recovered_response).and_return(recovered_response)
       expect(Random).to receive(:rand).with(1).ordered.and_return(0)
 
       expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no entries')
@@ -371,7 +374,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         ] }]
       }
       response = jsonp_response("callback(#{JSON.generate('feed' => feed)});")
-      expect(page_http).to receive(:request_get).with(feed_path(1)).once.ordered.and_yield(response).and_return(response)
+      expect(page_http).to receive(:request_get).with(feed_path(1)).once.ordered
+                                                .and_yield(response).and_return(response)
       expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).once.ordered
 
       expect(described_class.random.url).to eq(show_url)

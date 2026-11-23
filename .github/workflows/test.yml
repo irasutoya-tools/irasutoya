@@ -20,6 +20,8 @@ jobs:
           bundler-cache: true
       - name: Run lint
         run: bundle exec rubocop lib
+      - name: Check Ruby formatting
+        run: bundle exec rubocop --only Layout
   test:
     runs-on: ubuntu-24.04
     strategy:
