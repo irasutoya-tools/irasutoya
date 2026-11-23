@@ -9,6 +9,7 @@ RSpec.describe 'Illustration HTTP connections' do
   let(:origin) { "http://127.0.0.1:#{listener.addr[1]}" }
   let(:trusted_origin) { 'https://www.irasutoya.com' }
   let(:acceptor) { listener }
+  let(:accepted_connections) { Queue.new }
   let(:requests) { Queue.new }
   let(:disconnections) { Queue.new }
 
@@ -31,6 +32,7 @@ RSpec.describe 'Illustration HTTP connections' do
     server = Thread.new do
       loop do
         socket = server_socket.accept
+        accepted_connections << socket
         connections << Thread.new(socket) do |client|
           serve(client)
         ensure
@@ -291,6 +293,28 @@ RSpec.describe 'Illustration HTTP connections' do
     redirect_socket, destination_socket = Array.new(2) { requests.pop }
     expect(disconnections.pop).to equal(redirect_socket)
     expect(destination_socket).not_to equal(redirect_socket)
+  end
+
+  it 'reuses a live idle connection after closing an unfinished redirect response' do
+    allow(self).to receive(:response_for).with('/unfinished') do
+      release_body.pop
+      unfinished_redirect('/target')
+    end
+    allow(self).to receive(:response_for).with('/warm').and_call_original
+    allow(self).to receive(:response_for).with('/target').and_call_original
+
+    redirect_fetch = Thread.new { fetch_detail('/unfinished') }
+    redirect_socket = requests.pop
+    expect(fetch_detail('/warm').title).to eq('/warm')
+    warm_socket = requests.pop
+
+    release_body << true
+    expect(redirect_fetch.value.title).to eq('/target')
+    expect(disconnections.pop).to equal(redirect_socket)
+    expect(requests.pop).to equal(warm_socket)
+    expect(accepted_connections.size).to eq(2)
+  ensure
+    redirect_fetch&.kill&.join
   end
 
   it 'enforces the HTML byte limit at the redirect destination' do

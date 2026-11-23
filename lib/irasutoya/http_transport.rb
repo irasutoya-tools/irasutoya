@@ -135,7 +135,7 @@ module Irasutoya
       @lock.synchronize do
         loop do
           sessions = (@sessions[key] ||= {})
-          session = sessions.key(false)
+          session = idle_session(sessions)
           session ||= new_session(key) if sessions.size < @max_connections
           next wait_for_session unless session
 
@@ -143,6 +143,10 @@ module Irasutoya
           return session
         end
       end
+    end
+
+    def idle_session(sessions)
+      sessions.find { |session, busy| !busy && session.reusable_connection? }&.first || sessions.key(false)
     end
 
     def new_session(key)
@@ -178,6 +182,11 @@ module Irasutoya
 
   class HttpSession
     IDLE_TIMEOUT = 5.0
+
+    def reusable_connection?
+      socket = @http&.instance_variable_get(:@socket)
+      !socket.nil? && !socket.closed?
+    end
 
     def request(uri, proxy)
       @lock.synchronize do

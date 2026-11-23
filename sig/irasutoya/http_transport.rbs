@@ -53,6 +53,7 @@ module Irasutoya
     def abort_download: (Net::HTTP, Integer) -> bot
     def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
     def acquire_session: (origin) -> HttpSession
+    def idle_session: (Hash[HttpSession, bool]) -> HttpSession?
     def new_session: (origin) -> HttpSession
     def wait_for_session: () -> void
     def release_session: (origin, HttpSession) -> void
@@ -66,6 +67,7 @@ module Irasutoya
     @http: untyped
     @idle_since: Float
 
+    def reusable_connection?: () -> bool
     def request: (URI::HTTP, URI::Generic?) { (Net::HTTP, Net::HTTPResponse) -> untyped } -> Net::HTTPResponse
     def initialize: () { (HttpSession) -> bool } -> void
     def close_inherited_connection: () -> void
