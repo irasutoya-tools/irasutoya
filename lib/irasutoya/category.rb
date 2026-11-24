@@ -30,6 +30,9 @@ module Irasutoya
       end
 
       def category_from_url(page_url, href)
+        href = href.strip
+        return if href.empty?
+
         url = URI.join(page_url, href)
         return unless Modules::HasDocumentFetcher.trusted_page_origin?(url)
 
