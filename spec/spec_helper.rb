@@ -16,9 +16,9 @@ module PageFixtures
     stub_page_http.tap { |http| stub_html(http, File.read("spec/files/#{filename}")) }
   end
 
-  def stub_html(http, html, path: nil)
+  def stub_html(http, html, path: nil, content_type: 'text/html; charset=UTF-8')
     response = Net::HTTPOK.new('1.1', '200', 'OK')
-    response['Content-Type'] = 'text/html; charset=UTF-8'
+    response['Content-Type'] = content_type
     allow(response).to receive(:body).and_return(html)
     allow(response).to receive(:read_body).and_yield(html)
     request = allow(http).to receive(:request_get)

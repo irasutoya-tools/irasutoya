@@ -25,6 +25,44 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
                                                                                                             ])
     end
 
+    context 'with a Shift_JIS detail page' do
+      let(:url) { 'https://www.irasutoya.com/2014/03/blog-post.html' }
+      let(:title) { '猫のイラスト' }
+      let(:html) do
+        <<~HTML.encode(Encoding::Shift_JIS).b
+          <html>
+            <head><meta http-equiv="Content-Type" content="text/html; charset=#{meta_charset}"></head>
+            <body>
+              <div class="post">
+                <div class="title"><h2>#{title}</h2></div>
+                <div class="entry"><img src="cat.png"></div>
+              </div>
+            </body>
+          </html>
+        HTML
+      end
+
+      context 'when the HTTP header omits the charset' do
+        let(:meta_charset) { 'Shift_JIS' }
+
+        it 'decodes the title using the HTML charset' do
+          stub_html(stub_page_http, html, content_type: 'text/html')
+
+          expect(described_class.from_url(url).title).to eq(title)
+        end
+      end
+
+      context 'when the HTTP charset conflicts with the HTML charset' do
+        let(:meta_charset) { 'UTF-8' }
+
+        it 'decodes the title using the HTTP charset' do
+          stub_html(stub_page_http, html, content_type: 'text/html; Charset="Shift_JIS"')
+
+          expect(described_class.from_url(url).title).to eq(title)
+        end
+      end
+    end
+
     it 'skips a leading one-pixel Blogger placeholder and keeps illustrations in order' do
       stub_page('show_with_one_pixel_placeholder.html')
       image_urls = %w[
