@@ -17,11 +17,7 @@ module Irasutoya
 
     def self.from_url(url)
       validate_input_url(url)
-      PageLoader.load_detail(
-        url,
-        fetch: ->(page_url) { fetch_page_and_parse(page_url) },
-        parse: method(:parse_show_page)
-      )
+      load_detail(url)
     end
 
     def initialize(url:, title:, description:, image_urls:, categories: [])
@@ -55,11 +51,7 @@ module Irasutoya
     class << self
       def random
         with_fetch_timeout do
-          PageLoader.load_detail(
-            random_url,
-            fetch: ->(page_url) { fetch_page_and_parse(page_url) },
-            parse: method(:parse_show_page)
-          )
+          load_initial_random_post(alternate_url(random_entry)) || load_refreshed_random_post
         end
       end
 
@@ -104,9 +96,25 @@ module Irasutoya
         JSON.parse(payload).fetch('feed')
       end
 
-      def random_url
-        alternate_url(random_entry) || alternate_url(random_entry(refresh: true)) ||
-          raise('Illustration feed has no usable post URL')
+      def load_initial_random_post(url)
+        load_detail(url) if url
+      rescue OpenURI::HTTPError => e
+        raise unless %w[404 410].include?(e.io.status.first)
+
+        nil
+      end
+
+      def load_refreshed_random_post
+        url = alternate_url(random_entry(refresh: true)) or raise 'Illustration feed has no usable post URL'
+        load_detail(url)
+      end
+
+      def load_detail(url)
+        PageLoader.load_detail(
+          url,
+          fetch: ->(page_url) { fetch_page_and_parse(page_url) },
+          parse: method(:parse_show_page)
+        )
       end
 
       def alternate_url(entry)

@@ -358,6 +358,65 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(page_http).to have_received(:request_get).with(URI.parse(show_url).request_uri).once
     end
 
+    context 'when the selected post fails to load' do
+      let(:missing_path) { '/deleted.html' }
+      let(:feed_count) { 1 }
+      let(:feed_body) { post_feed("https://www.irasutoya.com#{missing_path}") }
+      let(:refreshed_response) { jsonp_response(post_feed(show_url)) }
+
+      before do
+        allow(page_http).to receive(:request_get).with(feed_path(1)).and_raise('Unexpected feed request')
+        expect(page_http).to receive(:request_get).with(feed_path(1)).once.ordered.and_yield(feed_response)
+      end
+
+      shared_examples 'a missing post' do |response_class, status, message|
+        before { expect_detail_error(missing_path, response_class, status, message) }
+
+        it 'loads the post from the refreshed feed' do
+          expect_feed_refresh
+          expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).once.ordered
+
+          expect(described_class.random.url).to eq(show_url)
+        end
+      end
+
+      it_behaves_like 'a missing post', Net::HTTPNotFound, '404', 'Not Found'
+      it_behaves_like 'a missing post', Net::HTTPGone, '410', 'Gone'
+
+      it 'propagates the second missing response after one refresh' do
+        expect_detail_error(missing_path, Net::HTTPNotFound, '404', 'Not Found')
+        expect_feed_refresh
+        expect_detail_error(URI.parse(show_url).request_uri, Net::HTTPGone, '410', 'Gone')
+
+        expect { described_class.random }.to raise_error(OpenURI::HTTPError, '410 Gone')
+      end
+
+      it 'propagates other detail failures without refreshing the feed' do
+        expect_detail_error(missing_path, Net::HTTPServiceUnavailable, '503', 'Service Unavailable')
+
+        expect { described_class.random }.to raise_error(OpenURI::HTTPError, '503 Service Unavailable')
+      end
+
+      def expect_feed_refresh
+        expect(page_http).to receive(:request_get).with(feed_path(1)).once.ordered.and_yield(refreshed_response)
+      end
+
+      def post_feed(url)
+        feed = {
+          'openSearch$totalResults' => { '$t' => feed_count.to_s },
+          'entry' => [{ 'link' => [{ 'rel' => 'alternate', 'href' => url }] }]
+        }
+        "callback(#{JSON.generate('feed' => feed)});"
+      end
+
+      def expect_detail_error(path, response_class, status, message)
+        response = response_class.new('1.1', status, message)
+        allow(response).to receive(:body).and_return('')
+        allow(response).to receive(:read_body).and_yield('')
+        expect(page_http).to receive(:request_get).with(path).once.ordered.and_yield(response).and_return(response)
+      end
+    end
+
     context 'when the selected feed entry has an off-origin alternate URL' do
       let(:feed_count) { 1 }
       let(:off_origin_url) { 'https://example.org/post.html' }

@@ -97,6 +97,29 @@ RSpec.describe 'Illustration fetch deadlines' do
     expect(@requests.pop(true)).to start_with('GET /detail ')
   end
 
+  it 'shares the original deadline across a missing random post and its replacement' do
+    serve(
+      response('200 OK', body: random_feed('/deleted'), delay: 0.1),
+      response('404 Not Found', delay: 0.14),
+      response('200 OK', body: random_feed('/replacement'), delay: 0.08),
+      response('200 OK', body: File.read('spec/files/show.html'), delay: 0.32)
+    )
+
+    expect_timeout { Irasutoya::Irasuto.random }
+    expect(@requests.pop(true)).to start_with('GET /feeds/posts/summary?start-index=1&')
+    expect(@requests.pop(true)).to start_with('GET /deleted ')
+    expect(@requests.pop(true)).to start_with('GET /feeds/posts/summary?start-index=1&')
+    expect(@requests.pop(true)).to start_with('GET /replacement ')
+  end
+
+  def random_feed(path)
+    feed = {
+      'openSearch$totalResults' => { '$t' => '1' },
+      'entry' => [{ link: [{ rel: 'alternate', href: "#{trusted_url}#{path}" }] }]
+    }
+    "callback(#{JSON.generate(feed: feed)});"
+  end
+
   def fetch_illustration(path)
     Irasutoya::IrasutoLink.new(title: '', show_url: "#{trusted_url}#{path}").fetch_irasuto
   end
