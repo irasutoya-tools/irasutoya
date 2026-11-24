@@ -44,13 +44,13 @@ module Irasutoya
     private def self.validate_input_url: (String) -> void
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]
     private def self.load_initial_random_post: (String?) -> Irasuto?
-    private def self.load_refreshed_random_post: -> Irasuto
+    private def self.load_refreshed_random_post: (Integer) -> Irasuto
     private def self.load_detail: (String) -> Irasuto
     private def self.alternate_url: (Hash[String, untyped]?) -> String?
     private def self.trusted_feed_url?: (untyped) -> bool
-    private def self.random_entry: (?refresh: bool) -> Hash[String, untyped]?
+    private def self.random_entry: (?stale_count: Integer?) -> [Hash[String, untyped]?, Integer]
     private def self.cached_feed_count: -> Integer?
-    private def self.feed_count: (bool) -> [Integer, Hash[String, untyped]?]
+    private def self.feed_count: (Integer?) -> [Integer, Hash[String, untyped]?]
     private def self.wait_for_current_feed_count: -> [Integer, Hash[String, untyped]]?
     private def self.wait_for_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]?
     private def self.refresh_feed_count: (FeedCountRefresh) -> [Integer, Hash[String, untyped]]

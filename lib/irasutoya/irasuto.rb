@@ -51,7 +51,8 @@ module Irasutoya
     class << self
       def random
         with_fetch_timeout do
-          load_initial_random_post(alternate_url(random_entry)) || load_refreshed_random_post
+          entry, count = random_entry
+          load_initial_random_post(alternate_url(entry)) || load_refreshed_random_post(count)
         end
       end
 
@@ -104,8 +105,9 @@ module Irasutoya
         nil
       end
 
-      def load_refreshed_random_post
-        url = alternate_url(random_entry(refresh: true)) or raise 'Illustration feed has no usable post URL'
+      def load_refreshed_random_post(stale_count)
+        entry, = random_entry(stale_count: stale_count)
+        url = alternate_url(entry) or raise 'Illustration feed has no usable post URL'
         load_detail(url)
       end
 
@@ -131,13 +133,13 @@ module Irasutoya
         false
       end
 
-      def random_entry(refresh: false)
-        count, first_feed = feed_count(refresh)
+      def random_entry(stale_count: nil)
+        count, first_feed = feed_count(stale_count)
         raise 'Illustration feed has no entries' if count.zero?
 
         index = Random.rand(count) + 1
         feed = index == 1 && first_feed ? first_feed : fetch_feed(index)
-        feed.fetch('entry', []).first
+        [feed.fetch('entry', []).first, count]
       end
 
       def cached_feed_count
@@ -145,15 +147,15 @@ module Irasutoya
         count if expires_at && feed_count_time < expires_at
       end
 
-      def feed_count(refresh)
+      def feed_count(stale_count)
         # Keep registration and cleanup atomic with respect to the fetch deadline.
         with_count_interrupt(:never) do
           pending = FEED_COUNT_LOCK.synchronize do
             result = wait_for_current_feed_count
             return result if result
 
-            count = cached_feed_count unless refresh
-            return [count, nil] if count
+            count = cached_feed_count
+            return [count, nil] if count && count != stale_count
 
             @feed_count_refresh = FeedCountRefresh.new(Process.pid)
           end
