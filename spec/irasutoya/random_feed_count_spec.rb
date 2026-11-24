@@ -74,6 +74,68 @@ RSpec.describe Irasutoya::Irasuto, 'concurrent random feed counts' do
     include_examples 'a shared count refresh'
   end
 
+  it 'refreshes once and lets retries reuse the refreshed count instead of repeating the refresh' do
+    stale_count = 10
+    refreshed_count = 4
+    stale_feed = JSON.generate(feed: { 'openSearch$totalResults' => { '$t' => stale_count.to_s } })
+    refreshed_feed = JSON.generate(
+      feed: {
+        'openSearch$totalResults' => { '$t' => refreshed_count.to_s },
+        'entry' => [{ link: [{ rel: 'alternate', href: show_url }] }]
+      }
+    )
+    described_class.instance_variable_set(:@feed_count_cache, [stale_count, Float::INFINITY])
+
+    stale_requests = Queue.new
+    release_stale = Queue.new
+    count_requests = Queue.new
+    release_count = Queue.new
+    finished = Queue.new
+
+    allow(Random).to receive(:rand).with(stale_count).and_return(stale_count - 1)
+    allow(Random).to receive(:rand).with(refreshed_count).and_return(0, 1, 2, 3)
+    allow(Irasutoya::ResponseFetcher).to receive(:get).with(/start-index=#{stale_count}&/, any_args) do
+      stale_requests << true
+      release_stale.pop
+      [stale_feed, nil]
+    end
+    allow(Irasutoya::ResponseFetcher).to receive(:get).with(count_url, any_args) do
+      count_requests << true
+      release_count.pop
+      [refreshed_feed, nil]
+    end
+    [2, 3, 4].each do |index|
+      allow(Irasutoya::ResponseFetcher).to receive(:get).with(/start-index=#{index}&/, any_args) do
+        [refreshed_feed, nil]
+      end
+    end
+
+    @workers = Array.new(4) do
+      Thread.new do
+        described_class.random
+      rescue StandardError => e
+        e
+      ensure
+        finished << true
+      end
+    end
+
+    4.times { pop(stale_requests) }
+
+    release_stale << true
+    pop(count_requests)
+    release_count << true
+    pop(finished)
+
+    3.times do
+      release_stale << true
+      pop(finished)
+    end
+
+    expect(@workers.map { |worker| result(worker).url }).to eq([show_url] * 4)
+    expect(count_requests).to be_empty
+  end
+
   it 'shares the refresh error and allows a subsequent call to retry' do
     block_count_request { raise IOError, 'Count request failed' }
     leader = start_refresh
