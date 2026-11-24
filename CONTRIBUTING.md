@@ -20,6 +20,7 @@ Run the same tests, lint, and formatting checks used by [CI](.github/workflows/t
 bundle exec rspec
 bundle exec rubocop lib
 bundle exec rubocop --only Layout
+gem build irasutoya.gemspec
 ```
 
 Run `bundle exec rubocop --fix-layout` to apply Ruby formatting corrections.
