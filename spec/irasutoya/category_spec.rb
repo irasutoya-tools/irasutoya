@@ -38,6 +38,35 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  describe '.all with whitespace-padded sidebar hrefs' do
+    before do
+      http = stub_page_http
+      html = <<~HTML.dup
+        <!doctype html>
+        <html lang="en">
+          <body>
+            <div id="sidebar-wrapper">
+              <div class="widget">
+                <h2>詳細カテゴリー</h2>
+                <a href=" /search/label/Cats ">Cats</a>
+                <a href="   ">Blank</a>
+                <a href="/search/label/Cats">Cats</a>
+              </div>
+            </div>
+          </body>
+        </html>
+      HTML
+      stub_html(http, html)
+    end
+
+    it 'resolves the padded link to the same listing URL as its unpadded equivalent and skips blank links' do
+      categories = described_class.all
+
+      expect(categories.map(&:title)).to eq(['Cats'])
+      expect(categories.map(&:list_url)).to eq(['https://www.irasutoya.com/search/label/Cats'])
+    end
+  end
+
   describe '.all without the category widget' do
     before { stub_page('index_without_category_widget.html') }
 
