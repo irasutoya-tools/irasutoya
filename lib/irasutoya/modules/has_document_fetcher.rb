@@ -22,6 +22,15 @@ module Irasutoya
           uri.port == uri.default_port && uri.userinfo.nil?
       end
 
+      def self.trusted_request_url(url)
+        uri = URI.parse(url)
+        return unless trusted_page_origin?(uri)
+
+        URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query).to_s
+      rescue URI::Error
+        nil
+      end
+
       module Methods
         def fetch_page_and_parse(url, uri: nil)
           with_fetch_timeout do

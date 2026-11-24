@@ -10,6 +10,8 @@ module Irasutoya
 
       def self.trusted_page_origin?: (URI::Generic) -> bool
 
+      def self.trusted_request_url: (String) -> String?
+
       module Methods
         def fetch_page_and_parse: (String, ?uri: URI::Generic?) -> untyped
 

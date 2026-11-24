@@ -47,4 +47,42 @@ RSpec.describe Irasutoya::Category do
     expect(http).to have_received(:request_get).with(first_path).once
     expect(http).to have_received(:request_get).once
   end
+
+  it 'stops after one fetch when the older-results link points to the current listing over HTTP' do
+    html = File.read('spec/files/category_first_page.html')
+    html = html.sub(/href="\?[^"]+"/, %(href="http://www.irasutoya.com#{first_path}"))
+    stub_html(http, html, path: first_path)
+
+    expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
+    expect(http).to have_received(:request_get).with(first_path).once
+    expect(http).to have_received(:request_get).once
+  end
+
+  it 'advances to the next page when the older-results link uses HTTP with a distinct query' do
+    distinct_path = "#{first_path}?page=2"
+    html = File.read('spec/files/category_first_page.html')
+    html = html.sub(/href="\?[^"]+"/, %(href="http://www.irasutoya.com#{distinct_path}"))
+    stub_html(http, html, path: first_path)
+    stub_html(http, File.read('spec/files/category_last_page.html'), path: distinct_path)
+
+    expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat', 'Walking cat'])
+    expect(http).to have_received(:request_get).with(first_path).once
+    expect(http).to have_received(:request_get).with(distinct_path).once
+  end
+
+  it 'stops traversal when an older-results redirect lands on an already visited listing' do
+    redirect_path = "#{first_path}/more"
+    html = File.read('spec/files/category_first_page.html')
+    html = html.sub(/href="\?[^"]+"/, %(href="#{redirect_path}"))
+    stub_html(http, html, path: first_path)
+
+    response = Net::HTTPFound.new('1.1', '302', 'Found')
+    response['Location'] = "http://www.irasutoya.com#{first_path}"
+    response['Content-Length'] = '0'
+    allow(response).to receive(:read_body)
+    allow(http).to receive(:request_get).with(redirect_path).and_yield(response).and_return(response)
+
+    expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
+    expect(http).to have_received(:request_get).with(redirect_path).once
+  end
 end
