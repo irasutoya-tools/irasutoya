@@ -41,7 +41,7 @@ RSpec.describe Irasutoya::Category do # rubocop:disable Metrics/BlockLength
   describe '.all with whitespace-padded sidebar hrefs' do
     before do
       http = stub_page_http
-      html = <<~HTML
+      html = <<~HTML.dup
         <!doctype html>
         <html lang="en">
           <body>
