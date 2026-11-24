@@ -41,6 +41,42 @@ RSpec.describe Irasutoya::ResponseFetcher do
     end
   end
 
+  it 'decodes a single gzip member at the byte limit' do
+    with_gzip_response(Zlib.gzip('first')) do |url|
+      expect(described_class.get(url, max_bytes: 5)).to eq(['first', nil])
+    end
+  end
+
+  it 'decodes concatenated gzip members at the combined byte limit' do
+    with_gzip_response(Zlib.gzip('first') + Zlib.gzip('second')) do |url|
+      expect(described_class.get(url, max_bytes: 11)).to eq(['firstsecond', nil])
+    end
+  end
+
+  it 'enforces the byte limit across gzip members' do
+    with_gzip_response(Zlib.gzip('first') + Zlib.gzip('second')) do |url|
+      expect { described_class.get(url, max_bytes: 6) }
+        .to raise_error(Irasutoya::ResponseTooLargeError, 'HTTP response exceeds the 6-byte limit')
+    end
+  end
+
+  it 'rejects a truncated second gzip member' do
+    second = Zlib.gzip('second')
+    with_gzip_response(Zlib.gzip('first') + second.byteslice(0...-1)) do |url|
+      expect { described_class.get(url, max_bytes: 11) }.to raise_error(Zlib::BufError)
+    end
+  end
+
+  it 'decodes gzip members split across HTTP chunks' do
+    first = Zlib.gzip('first')
+    second = Zlib.gzip('second')
+    chunks = [first, second.byteslice(0, 1), second.byteslice(1..)]
+    body = chunks.map { |chunk| "#{chunk.bytesize.to_s(16)}\r\n#{chunk}\r\n" }.join
+    with_response("Content-Encoding: x-gzip\r\nTransfer-Encoding: chunked", body + "0\r\n\r\n") do |url|
+      expect(described_class.get(url, max_bytes: 11)).to eq(['firstsecond', nil])
+    end
+  end
+
   it 'follows redirects without downloading their bodies' do
     with_response('Content-Length: 2', 'ok') do |target|
       headers = "Location: #{target}\r\nContent-Length: 9999999"
@@ -48,6 +84,10 @@ RSpec.describe Irasutoya::ResponseFetcher do
         expect(described_class.get(url, max_bytes: 2)).to eq(['ok', nil])
       end
     end
+  end
+
+  def with_gzip_response(body, &)
+    with_response("Content-Encoding: gzip\r\nContent-Length: #{body.bytesize}", body, &)
   end
 
   def with_response(headers, body, status: '200 OK', close_after_write: false)

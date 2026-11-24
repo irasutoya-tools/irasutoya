@@ -33,6 +33,12 @@ module Irasutoya
     def find_proxy: (URI::HTTP, proxy_settings) -> URI::Generic?
   end
 
+  module GzipResponse
+    def self.encoded?: (Net::HTTPResponse) -> bool
+    def self.read: (Net::HTTPResponse) { (String) -> void } -> void
+    private def self.inflate_members: (Zlib::Inflate, String) { (String) -> void } -> void
+  end
+
   class HttpSessionPool
     type origin = [Integer, String, String, Integer, String?]
 
@@ -50,6 +56,7 @@ module Irasutoya
 
     private
 
+    def read_response_body: (Net::HTTPResponse, String) { (String) -> void } -> void
     def abort_download: (Net::HTTP, Integer) -> bot
     def with_session: [Result] (origin) { (HttpSession) -> Result } -> Result
     def acquire_session: (origin) -> HttpSession
