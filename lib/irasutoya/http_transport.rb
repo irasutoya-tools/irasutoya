@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'English'
+require 'zlib'
 
 module Irasutoya
   # Net::HTTP retries Timeout::Error, so translate the deadline at the fetch boundary.
@@ -65,6 +66,39 @@ module Irasutoya
     end
   end
 
+  module GzipResponse
+    def self.encoded?(response)
+      encoding = response['content-encoding']&.downcase
+      response.decode_content && !response['content-range'] && %w[gzip x-gzip].include?(encoding)
+    end
+
+    def self.read(response, &)
+      inflater = Zlib::Inflate.new(Zlib::MAX_WBITS + 16)
+      response.decode_content = false
+      response.read_body { |chunk| inflate_members(inflater, chunk, &) }
+      inflater.finish if inflater.total_in.positive? && !inflater.finished?
+      response.delete('content-encoding')
+    ensure
+      inflater&.close
+    end
+
+    def self.inflate_members(inflater, chunk)
+      until chunk.empty?
+        inflater.reset if inflater.finished?
+        inflater.inflate(chunk) do |decoded|
+          yield decoded
+          nil
+        end
+        break unless inflater.finished?
+
+        # The inflater returns any bytes past the current member from finish.
+        chunk = inflater.finish
+      end
+    end
+
+    private_class_method :inflate_members
+  end
+
   class HttpSessionPool
     MAX_CONNECTIONS_PER_ORIGIN = 4
 
@@ -82,7 +116,7 @@ module Irasutoya
     def read_body(http, response, max_bytes)
       response.instance_variable_get(:@socket).extend(ChunkedReadDeadline) if response.chunked?
       body = ''.b
-      response.read_body do |chunk|
+      read_response_body(response, body) do |chunk|
         abort_download(http, max_bytes) if body.bytesize + chunk.bytesize > max_bytes
 
         body << chunk
@@ -112,6 +146,13 @@ module Irasutoya
     end
 
     private
+
+    def read_response_body(response, body, &)
+      return response.read_body(&) unless GzipResponse.encoded?(response)
+
+      GzipResponse.read(response, &)
+      response['content-length'] = body.bytesize.to_s if response['content-length']
+    end
 
     def abort_download(http, max_bytes)
       http.finish
@@ -266,6 +307,6 @@ module Irasutoya
   end
 
   Process.singleton_class.prepend(ForkCleanup) if Process.respond_to?(:_fork)
-  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :ProxyDecisions, :HttpSessionPool, :HttpSession,
-                   :HTTP_TRANSPORT, :ForkCleanup
+  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :ProxyDecisions, :GzipResponse, :HttpSessionPool,
+                   :HttpSession, :HTTP_TRANSPORT, :ForkCleanup
 end
