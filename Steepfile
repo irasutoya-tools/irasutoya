@@ -7,5 +7,6 @@ target :lib do
   library 'net-http'
   library 'open-uri'
   library 'timeout'
+  library 'zlib'
   check 'lib'
 end
