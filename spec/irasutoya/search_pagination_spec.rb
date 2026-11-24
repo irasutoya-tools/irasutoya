@@ -85,6 +85,21 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
   end
 
+  it 'stops after one fetch when the older-results link points to the current page over HTTP' do
+    stub_search_page(search_uri, first_results, "http://www.irasutoya.com#{search_uri.request_uri}")
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).once
+  end
+
+  it 'advances to the next page when the older-results link uses HTTP with a distinct query' do
+    stub_search_page(search_uri, first_results, "http://www.irasutoya.com#{next_href}")
+    expected_urls = next_results.map { |path| URI.join(next_url, path).to_s }
+
+    expect(described_class.search(query: query, page: 1).map(&:show_url)).to eq(expected_urls)
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
   context 'when the older link only adds a fragment' do
     before do
       stub_search_page(search_uri, first_results, '#older')

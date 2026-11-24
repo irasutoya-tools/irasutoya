@@ -68,18 +68,23 @@ module Irasutoya
     def self.each_list_page(url, fetch)
       url = without_fragment(url)
       visited = Set.new
-      while url && visited.add?(url)
+      while url && visited.add?(request_key(url))
         document = fetch.call(url)
         break unless document
 
         page_url = without_fragment(effective_url(document, url))
-        break if page_url != url && !visited.add?(page_url)
+        break if request_key(page_url) != request_key(url) && !visited.add?(request_key(page_url))
 
         yield document, page_url
         url = older_page_url(document, page_url)
       end
     end
     private_class_method :each_list_page
+
+    def self.request_key(url)
+      Modules::HasDocumentFetcher.trusted_request_url(url) || url
+    end
+    private_class_method :request_key
 
     def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')

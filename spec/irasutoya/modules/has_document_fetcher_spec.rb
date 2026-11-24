@@ -111,4 +111,29 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
 
     expect { fetch_page(page_url) }.to raise_error(IOError, 'Too many Irasutoya page redirects')
   end
+
+  describe '.trusted_request_url' do
+    it 'normalizes a trusted HTTP URL to the HTTPS request URL the fetcher would use' do
+      expect(described_class.trusted_request_url('http://www.irasutoya.com/search/label/Cats'))
+        .to eq('https://www.irasutoya.com/search/label/Cats')
+    end
+
+    it 'preserves the query string' do
+      expect(described_class.trusted_request_url('http://www.irasutoya.com/search?q=cat'))
+        .to eq('https://www.irasutoya.com/search?q=cat')
+    end
+
+    it 'drops the fragment' do
+      expect(described_class.trusted_request_url('https://www.irasutoya.com/search#top'))
+        .to eq('https://www.irasutoya.com/search')
+    end
+
+    it 'returns nil for an untrusted origin' do
+      expect(described_class.trusted_request_url('https://example.com/page')).to be_nil
+    end
+
+    it 'returns nil for a malformed URL' do
+      expect(described_class.trusted_request_url('https://www.irasutoya.com:bad/post.html')).to be_nil
+    end
+  end
 end
