@@ -27,10 +27,10 @@ RSpec.describe 'Irasutoya::Irasuto class method signatures' do
   end
 
   it 'keeps the random helpers private in Ruby and RBS' do
-    helpers = %i[fetch_feed random_url]
+    helpers = %i[fetch_feed load_initial_random_post load_refreshed_random_post]
 
     expect(irasuto.private_methods).to include(*helpers)
-    expect(methods.fetch_values(*helpers).map(&:accessibility)).to eq(%i[private private])
+    expect(methods.fetch_values(*helpers).map(&:accessibility)).to all(eq(:private))
   end
 
   it 'keeps random and search public in Ruby and RBS' do
