@@ -9,7 +9,6 @@ module Irasutoya
       TRUSTED_HOST = 'www.irasutoya.com'
       FETCH_TIMEOUT = 10
       MAX_HTML_BYTES = 4 * 1024 * 1024
-      REDIRECT_CODES = %w[301 302 303 307 308].freeze
 
       def self.included(klass)
         super
@@ -53,23 +52,27 @@ module Irasutoya
         MAX_REDIRECTS = 10
 
         def open(uri, &)
-          fetch_page(trusted_page_uri(uri), MAX_REDIRECTS, Set.new, &)
+          visited = Set.new
+          message = 'Too many Irasutoya page redirects'
+          RedirectFollower.follow(
+            trusted_page_uri(uri), MAX_REDIRECTS, too_many_redirects_message: message
+          ) do |current|
+            fetch_page(current, visited, &)
+          end
         end
 
         private
 
-        def fetch_page(uri, redirects_left, visited, &)
+        def fetch_page(uri, visited, &block)
           raise IOError, 'Irasutoya page redirect cycle detected' unless visited.add?(uri.request_uri)
 
           response = request(uri)
           document = response_document(uri, response)
-          return yield document if response.is_a?(Net::HTTPSuccess)
+          return block.call(document) if response.is_a?(Net::HTTPSuccess)
 
           target = redirect(uri, response, document)
           document.close
-          raise IOError, 'Too many Irasutoya page redirects' if redirects_left.zero?
-
-          fetch_page(trusted_page_uri(target), redirects_left - 1, visited, &)
+          RedirectFollower::Redirect.new(trusted_page_uri(target))
         end
 
         def request(uri)
@@ -81,7 +84,7 @@ module Irasutoya
         end
 
         def unread_redirect_body?(response)
-          REDIRECT_CODES.include?(response.code) &&
+          RedirectFollower::REDIRECT_CODES.include?(response.code) &&
             (response['content-length'] != '0' || response.key?('transfer-encoding'))
         end
 
@@ -93,7 +96,7 @@ module Irasutoya
 
         def redirect(uri, response, document)
           status = document.status.join(' ')
-          raise OpenURI::HTTPError.new(status, document) unless REDIRECT_CODES.include?(response.code)
+          raise OpenURI::HTTPError.new(status, document) unless RedirectFollower::REDIRECT_CODES.include?(response.code)
 
           location = response['location']
           raise URI::InvalidURIError if location.nil? || location.strip.empty?
@@ -105,7 +108,7 @@ module Irasutoya
 
         def response_document(uri, response)
           # @type var document: untyped
-          document = StringIO.new(REDIRECT_CODES.include?(response.code) ? '' : response.body.to_s)
+          document = StringIO.new(RedirectFollower::REDIRECT_CODES.include?(response.code) ? '' : response.body.to_s)
           document.tap do
             OpenURI::Meta.init(document)
             document.base_uri = uri
