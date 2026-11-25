@@ -1,17 +1,14 @@
 # frozen_string_literal: true
 
 module Irasutoya
-  class Irasuto # rubocop:disable Metrics/ClassLength
+  class Irasuto
     include Modules::HasDocumentFetcher
     include Modules::HasListPageParser
     include Modules::HasShowPageParser
 
     MAX_FEED_BYTES = 1024 * 1024
     FEED_COUNT_TTL = 300
-    FEED_COUNT_LOCK = Mutex.new
-    FEED_COUNT_READY = ConditionVariable.new
-    FeedCountRefresh = Struct.new(:pid, :result, :error)
-    private_constant :FEED_COUNT_TTL, :FEED_COUNT_LOCK, :FEED_COUNT_READY, :FeedCountRefresh
+    FEED_COUNT_CACHE = FeedCountCache.new(ttl: FEED_COUNT_TTL) { fetch_feed_count }
 
     attr_reader :url, :title, :description
 
@@ -134,7 +131,7 @@ module Irasutoya
       end
 
       def random_entry(stale_count: nil)
-        count, first_feed = feed_count(stale_count)
+        count, first_feed = FEED_COUNT_CACHE.fetch(stale_count: stale_count)
         raise 'Illustration feed has no entries' if count.zero?
 
         index = Random.rand(count) + 1
@@ -142,79 +139,10 @@ module Irasutoya
         [feed.fetch('entry', []).first, count]
       end
 
-      def cached_feed_count
-        count, expires_at = @feed_count_cache
-        count if expires_at && feed_count_time < expires_at
-      end
-
-      def feed_count(stale_count)
-        # Keep registration and cleanup atomic with respect to the fetch deadline.
-        with_count_interrupt(:never) do
-          pending = FEED_COUNT_LOCK.synchronize do
-            result = wait_for_current_feed_count
-            return result if result
-
-            count = cached_feed_count
-            return [count, nil] if count && count != stale_count
-
-            @feed_count_refresh = FeedCountRefresh.new(Process.pid)
-          end
-          refresh_feed_count(pending)
-        end
-      end
-
-      def wait_for_current_feed_count
-        while (current = @feed_count_refresh) && current.pid == Process.pid
-          result = wait_for_feed_count(current)
-          return result if result
-        end
-        nil
-      end
-
-      def wait_for_feed_count(refresh)
-        with_count_interrupt(:immediate) do
-          FEED_COUNT_READY.wait(FEED_COUNT_LOCK) while @feed_count_refresh.equal?(refresh)
-        end
-        error = refresh.error
-        return if error.is_a?(FetchDeadlineExceeded)
-
-        raise error if error
-
-        refresh.result || raise(IOError, 'Feed count refresh interrupted')
-      end
-
-      def refresh_feed_count(refresh)
-        result = with_count_interrupt(:immediate) { fetch_feed_count }
-        refresh.result = result
-      rescue StandardError => e
-        refresh.error = e
-        raise
-      ensure
-        finish_feed_count_refresh
-      end
-
-      def finish_feed_count_refresh
-        FEED_COUNT_LOCK.synchronize do
-          @feed_count_refresh = nil
-          FEED_COUNT_READY.broadcast
-        end
-      end
-
       def fetch_feed_count
         feed = fetch_feed(1)
         count = Integer(feed.dig('openSearch$totalResults', '$t'), 10)
-        @feed_count_cache = count.positive? ? [count, feed_count_time + FEED_COUNT_TTL] : nil
         [count, feed]
-      end
-
-      def with_count_interrupt(timing, &)
-        # @type var thread: untyped
-        thread = Thread
-        thread.handle_interrupt(FetchDeadlineExceeded => timing, &)
-      end
-
-      def feed_count_time
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     end
   end

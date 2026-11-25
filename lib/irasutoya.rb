@@ -6,6 +6,7 @@ require 'irasutoya/response_fetcher'
 require 'irasutoya/page_loader'
 
 require 'irasutoya/category'
+require 'irasutoya/feed_count_cache'
 require 'irasutoya/irasuto'
 require 'irasutoya/irasuto_link'
 require 'irasutoya/version'
