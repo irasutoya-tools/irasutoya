@@ -78,7 +78,7 @@ RSpec.describe Irasutoya::FeedCountCache do
     release << [3, { 'entry' => ['shared'] }]
 
     expect([leader, *followers].map { |worker| result(worker) }).to eq([[3, { 'entry' => ['shared'] }]] * 4)
-    expect(requests.size).to eq(1)
+    expect(requests.size).to eq(0)
   end
 
   it 'lets waiters start one replacement when the initiating refresh deadline expires' do
