@@ -65,10 +65,10 @@ RSpec.describe Irasutoya::Irasuto, 'concurrent random feed counts' do
 
   context 'with an expired cache' do
     before do
-      allow(described_class).to receive(:feed_count_time).and_return(100.0)
+      allow(feed_count_cache).to receive(:clock_time).and_return(100.0)
       allow(Irasutoya::ResponseFetcher).to receive(:get).with(count_url, any_args).and_return([feed, nil])
       described_class.random
-      allow(described_class).to receive(:feed_count_time).and_return(400.0)
+      allow(feed_count_cache).to receive(:clock_time).and_return(400.0)
     end
 
     include_examples 'a shared count refresh'
@@ -84,7 +84,7 @@ RSpec.describe Irasutoya::Irasuto, 'concurrent random feed counts' do
         'entry' => [{ link: [{ rel: 'alternate', href: show_url }] }]
       }
     )
-    described_class.instance_variable_set(:@feed_count_cache, [stale_count, Float::INFINITY])
+    feed_count_cache.instance_variable_set(:@cache, [stale_count, Float::INFINITY])
 
     stale_requests = Queue.new
     release_stale = Queue.new
@@ -189,6 +189,10 @@ RSpec.describe Irasutoya::Irasuto, 'concurrent random feed counts' do
     @release_count << true
     expect(result(leader).url).to eq(show_url)
     expect(described_class.random.url).to eq(show_url)
+  end
+
+  def feed_count_cache
+    described_class::FEED_COUNT_CACHE
   end
 
   def block_count_request

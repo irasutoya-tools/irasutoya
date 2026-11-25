@@ -5,3 +5,11 @@
 # one by one as the offenses are removed from the code base.
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
+
+# Offense count: 1
+# `Irasuto` still orchestrates three HTTP-backed entry points (`random`, `search`,
+# `from_url`) and their fetch/parse helpers; `Metrics/ClassLength` counts the nested
+# `class << self` body toward the class, which keeps this above the default Max.
+Metrics/ClassLength:
+  Exclude:
+    - 'lib/irasutoya/irasuto.rb'

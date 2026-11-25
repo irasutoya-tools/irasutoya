@@ -1,0 +1,33 @@
+module Irasutoya
+  class FeedCountCache
+    type fetch_result = [Integer, Hash[String, untyped]?]
+
+    class FeedCountRefresh < Struct[Integer | fetch_result | StandardError | nil]
+      attr_reader pid: Integer
+      attr_accessor result: fetch_result?
+      attr_accessor error: StandardError?
+      def self.new: (Integer pid) -> FeedCountRefresh
+    end
+
+    @ttl: Integer
+    @fetch: ^() -> fetch_result
+    @lock: Mutex
+    @ready: ConditionVariable
+    @cache: [Integer, Float]?
+    @refresh: FeedCountRefresh?
+
+    def initialize: (ttl: Integer) { () -> fetch_result } -> void
+    def fetch: (?stale_count: Integer?) -> fetch_result
+
+    private
+
+    def cached_count: -> Integer?
+    def wait_for_current_refresh: -> fetch_result?
+    def wait_for_refresh: (FeedCountRefresh) -> fetch_result?
+    def refresh_count: (FeedCountRefresh) -> fetch_result
+    def finish_refresh: -> void
+    def fetch_and_cache: -> fetch_result
+    def with_count_interrupt: [A] (:never | :immediate) { () -> A } -> A
+    def clock_time: -> Float
+  end
+end

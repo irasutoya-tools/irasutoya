@@ -241,10 +241,10 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
     end
 
     it 'uses a refreshed count after the cache expires' do
-      allow(described_class).to receive(:feed_count_time).and_return(100.0)
+      allow(described_class::FEED_COUNT_CACHE).to receive(:clock_time).and_return(100.0)
       described_class.random
 
-      allow(described_class).to receive(:feed_count_time).and_return(400.0)
+      allow(described_class::FEED_COUNT_CACHE).to receive(:clock_time).and_return(400.0)
       updated_response = jsonp_response(feed_body.sub(feed_count.to_s, '2'))
       expect(page_http).to receive(:request_get).with(feed_path(1)).ordered
                                                 .and_yield(updated_response).and_return(updated_response)
