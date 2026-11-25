@@ -19,7 +19,7 @@ module Irasutoya
 
     def self.follow(uri, max_redirects, too_many_redirects_message: 'Too many HTTP redirects')
       (max_redirects + 1).times do
-        case result = yield uri
+        case result = yield(uri)
         when Redirect
           uri = result.uri
         else
