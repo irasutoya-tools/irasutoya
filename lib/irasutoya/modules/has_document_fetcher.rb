@@ -54,7 +54,9 @@ module Irasutoya
         def open(uri, &)
           visited = Set.new
           message = 'Too many Irasutoya page redirects'
-          RedirectFollower.follow(trusted_page_uri(uri), MAX_REDIRECTS, too_many_redirects_message: message) do |current|
+          RedirectFollower.follow(
+            trusted_page_uri(uri), MAX_REDIRECTS, too_many_redirects_message: message
+          ) do |current|
             fetch_page(current, visited, &)
           end
         end
