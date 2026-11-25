@@ -14,12 +14,12 @@ Gem::Specification.new do |spec|
   spec.summary       = 'Ruby library for Irasutoya'
   spec.description   = 'A Ruby library for searching Irasutoya illustrations, browsing categories, ' \
                        'and fetching illustration details.'
-  spec.homepage      = 'https://github.com/unhappychoice/irasutoya'
+  spec.homepage      = 'https://github.com/irasutoya-tools/irasutoya'
   spec.license       = 'MIT'
 
   spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['source_code_uri'] = 'https://github.com/unhappychoice/irasutoya'
-  spec.metadata['changelog_uri'] = 'https://github.com/unhappychoice/irasutoya'
+  spec.metadata['source_code_uri'] = 'https://github.com/irasutoya-tools/irasutoya'
+  spec.metadata['changelog_uri'] = 'https://github.com/irasutoya-tools/irasutoya'
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.

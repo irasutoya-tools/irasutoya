@@ -4,7 +4,17 @@ RSpec.describe 'Packaged architecture guide' do
   let(:root) { File.expand_path('..', __dir__) }
   let(:guide) { File.join(root, 'docs/architecture.md') }
   let(:links) { File.read(guide).scan(/^\[([^\]]+)\]: (\S+)$/).to_h }
-  let(:files) { Gem::Specification.load(File.join(root, 'irasutoya.gemspec')).files }
+  let(:gemspec) { Gem::Specification.load(File.join(root, 'irasutoya.gemspec')) }
+  let(:files) { gemspec.files }
+
+  it 'points the gemspec homepage and metadata at the canonical repository' do
+    repository = 'https://github.com/irasutoya-tools/irasutoya'
+
+    expect(gemspec.homepage).to eq(repository)
+    expect(gemspec.metadata['homepage_uri']).to eq(repository)
+    expect(gemspec.metadata['source_code_uri']).to eq(repository)
+    expect(gemspec.metadata['changelog_uri']).to eq(repository)
+  end
 
   it 'links to the specs and fixtures in the canonical repository' do
     repository = 'https://github.com/irasutoya-tools/irasutoya'
