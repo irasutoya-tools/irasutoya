@@ -4,7 +4,6 @@ module Irasutoya
       TRUSTED_HOST: String
       FETCH_TIMEOUT: Integer
       MAX_HTML_BYTES: Integer
-      REDIRECT_CODES: Array[String]
 
       def self.included: (Class) -> void
 
@@ -27,7 +26,7 @@ module Irasutoya
 
         private
 
-        def fetch_page: [Result] (untyped, Integer, Set[String]) { (untyped) -> Result } -> Result
+        def fetch_page: [Result] (untyped, Set[String]) { (untyped) -> Result } -> (Result | RedirectFollower::Redirect)
         def request: (untyped) -> untyped
         def unread_redirect_body?: (untyped) -> bool
         def trusted_page_uri: (untyped) -> untyped

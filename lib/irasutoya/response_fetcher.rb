@@ -4,20 +4,16 @@ module Irasutoya
   class ResponseTooLargeError < StandardError; end
 
   module ResponseFetcher
-    REDIRECT_CODES = %w[301 302 303 307 308].freeze
     MAX_REDIRECTS = 64
 
     def self.get(url, max_bytes:, follow_redirects: true)
       uri = URI.parse(url)
       raise ArgumentError, 'Expected an HTTP or HTTPS URL' unless uri.is_a?(URI::HTTP)
 
-      (MAX_REDIRECTS + 1).times do
-        result = request(uri, max_bytes, follow_redirects)
-        return result if result.is_a?(Array)
-
-        uri = redirect_uri(uri, result)
+      RedirectFollower.follow(uri, MAX_REDIRECTS) do |current|
+        result = request(current, max_bytes, follow_redirects)
+        result.is_a?(Array) ? result : RedirectFollower::Redirect.new(redirect_uri(current, result))
       end
-      raise IOError, 'Too many HTTP redirects'
     end
 
     def self.read_body(http, response, max_bytes)
@@ -27,7 +23,7 @@ module Irasutoya
     def self.request(uri, max_bytes, follow_redirects)
       body = ''.b
       response = HTTP_TRANSPORT.request(uri) do |http, reply|
-        return reply.fetch('location') if follow_redirects && REDIRECT_CODES.include?(reply.code)
+        return reply.fetch('location') if follow_redirects && RedirectFollower::REDIRECT_CODES.include?(reply.code)
 
         reply.value
         body = read_body(http, reply, max_bytes)
@@ -36,6 +32,8 @@ module Irasutoya
     end
     private_class_method :request
 
+    # Allows any HTTP(S) host but rejects an https -> http scheme downgrade. HttpDocument applies
+    # a stricter, trusted-host-only policy instead; see Modules::HasDocumentFetcher::HttpDocument.
     def self.redirect_uri(uri, location)
       target = uri + location
       return target if target.is_a?(URI::HTTP) && (uri.scheme == 'http' || target.scheme == 'https')

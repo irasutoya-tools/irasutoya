@@ -21,7 +21,9 @@ The HTML fetcher validates page URLs and redirect targets before fetching them.
 `Irasuto.random` uses [`ResponseFetcher`][response] to read the posts feed, then
 loads the selected post through the detail loader. Both fetchers use the
 [shared HTTP transport][transport], which pools Net::HTTP connections and
-enforces the caller's response size limit while reading the body.
+enforces the caller's response size limit while reading the body, and the
+[shared redirect follower][redirects], which caps the number of hops; each
+fetcher still applies its own trust policy to the redirect target.
 
 ## Find the relevant specs
 
@@ -45,6 +47,7 @@ The parser specs use saved pages under [`spec/files/`][fixtures]. See
 [detail-parser]: ../lib/irasutoya/modules/has_show_page_parser.rb
 [response]: ../lib/irasutoya/response_fetcher.rb
 [transport]: ../lib/irasutoya/http_transport.rb
+[redirects]: ../lib/irasutoya/redirect_follower.rb
 [listing-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/incomplete_list_cards_spec.rb
 [pagination-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/search_pagination_spec.rb
 [detail-spec]: https://github.com/irasutoya-tools/irasutoya/blob/master/spec/irasutoya/irasuto_spec.rb

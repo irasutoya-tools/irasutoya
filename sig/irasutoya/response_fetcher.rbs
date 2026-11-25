@@ -3,7 +3,6 @@ module Irasutoya
   end
 
   module ResponseFetcher
-    REDIRECT_CODES: Array[String]
     MAX_REDIRECTS: Integer
 
     def self.get: (String, max_bytes: Integer, ?follow_redirects: bool) -> [String, String?]
