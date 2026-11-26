@@ -120,7 +120,9 @@ module Irasutoya
         links = entry&.[]('link')
         return nil unless links.is_a?(Array)
 
-        link = links.find { |candidate| candidate.is_a?(Hash) && candidate['rel'] == 'alternate' && trusted_feed_url?(candidate['href']) }
+        link = links.find do |candidate|
+          candidate.is_a?(Hash) && candidate['rel'] == 'alternate' && trusted_feed_url?(candidate['href'])
+        end
         link&.fetch('href')
       end
 
