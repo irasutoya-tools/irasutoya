@@ -23,9 +23,9 @@ module Irasutoya
 
       def self.trusted_request_url(url)
         uri = URI.parse(url)
-        return unless trusted_page_origin?(uri)
+        return unless uri.is_a?(URI::HTTP) && trusted_page_origin?(uri)
 
-        URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query).to_s
+        "https://#{TRUSTED_HOST}#{uri.request_uri}"
       rescue URI::Error
         nil
       end
@@ -108,7 +108,8 @@ module Irasutoya
 
         def response_document(uri, response)
           # @type var document: untyped
-          document = StringIO.new(RedirectFollower::REDIRECT_CODES.include?(response.code) ? '' : response.body.to_s)
+          body = RedirectFollower::REDIRECT_CODES.include?(response.code) ? '' : response.body.to_s.dup
+          document = StringIO.new(body)
           document.tap do
             OpenURI::Meta.init(document)
             document.base_uri = uri
