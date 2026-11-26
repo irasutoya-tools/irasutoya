@@ -17,7 +17,22 @@ module Irasutoya
         homepage_url = 'https://www.irasutoya.com'
         document = fetch_page_and_parse(homepage_url)
         page_url = PageLoader.effective_url(document, homepage_url)
-        category_hrefs(document).filter_map { |href| category_from_url(page_url, href) }.uniq(&:list_url)
+        category_hrefs(document).filter_map { |href| from_href(page_url, href) }.uniq(&:list_url)
+      end
+
+      def from_href(page_url, href, title: nil)
+        href = href.to_s.strip
+        return if href.empty?
+
+        url = URI.join(page_url.to_s, href)
+        return unless Modules::HasDocumentFetcher.trusted_page_origin?(url)
+
+        label = url.path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
+        return unless label
+
+        new(title: title || URI.decode_uri_component(label), list_url: url.to_s)
+      rescue URI::Error
+        nil
       end
 
       private
@@ -27,21 +42,6 @@ module Irasutoya
         return [] unless widget
 
         widget.css('a').filter_map { |anchor| anchor['href'] }
-      end
-
-      def category_from_url(page_url, href)
-        href = href.strip
-        return if href.empty?
-
-        url = URI.join(page_url, href)
-        return unless Modules::HasDocumentFetcher.trusted_page_origin?(url)
-
-        label = url.path.to_s[%r{\A/search/label/([^/]+)\z}, 1]
-        return unless label
-
-        new(title: URI.decode_uri_component(label), list_url: url.to_s)
-      rescue URI::Error
-        nil
       end
     end
 

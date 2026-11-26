@@ -45,14 +45,7 @@ module Irasutoya
           def category_from(title, href, page_url)
             return if title.empty? || href.empty?
 
-            reference = URI.parse(href)
-            url = reference.absolute? ? reference : URI.join(page_url.to_s, reference)
-            return unless HasDocumentFetcher.trusted_page_origin?(url)
-            return unless url.path.to_s.match?(%r{\A/search/label/[^/]+\z})
-
-            Category.new(title: title, list_url: url.to_s)
-          rescue URI::Error
-            nil
+            Category.from_href(page_url, href, title: title)
           end
 
           def resolve_image_url(source, page_url)
