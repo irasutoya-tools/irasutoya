@@ -1,0 +1,13 @@
+module Irasutoya
+  module RedirectFollower
+    REDIRECT_CODES: Array[String]
+
+    class Redirect
+      attr_reader uri: untyped
+
+      def initialize: (untyped) -> void
+    end
+
+    def self.follow: [Result] (untyped, Integer, ?too_many_redirects_message: String) { (untyped) -> (Result | Redirect) } -> Result
+  end
+end

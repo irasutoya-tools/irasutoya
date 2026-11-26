@@ -5,6 +5,19 @@ require 'timeout'
 require 'zlib'
 
 RSpec.describe Irasutoya::ResponseFetcher do
+  it 'rejects a non-HTTP URL without making a request' do
+    expect { described_class.get('ftp://example.com/file', max_bytes: 10) }
+      .to raise_error(ArgumentError, 'Expected an HTTP or HTTPS URL')
+  end
+
+  it 'rejects a redirect to an unsupported scheme' do
+    headers = "Location: ftp://example.com/file\r\nContent-Length: 0"
+    with_response(headers, '', status: '302 Found') do |url|
+      expect { described_class.get(url, max_bytes: 10) }
+        .to raise_error(IOError, 'HTTP redirect to unsupported scheme: ftp')
+    end
+  end
+
   it 'rejects a response that ends before its declared length' do
     with_response('Content-Length: 100', 'partial', close_after_write: true) do |url|
       expect { described_class.get(url, max_bytes: 100) }.to raise_error(EOFError)

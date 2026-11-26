@@ -1,5 +1,6 @@
 # Irasutoya
 
+[![test](https://github.com/irasutoya-tools/irasutoya/actions/workflows/test.yml/badge.svg)](https://github.com/irasutoya-tools/irasutoya/actions/workflows/test.yml)
 [![Gem Version](https://badge.fury.io/rb/irasutoya.svg)](https://badge.fury.io/rb/irasutoya)
 [![Code Climate](https://codeclimate.com/github/irasutoya-tools/irasutoya/badges/gpa.svg)](https://codeclimate.com/github/irasutoya-tools/irasutoya)
 [![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/irasutoya-tools/irasutoya.svg)](https://libraries.io/github/irasutoya-tools/irasutoya)
@@ -120,6 +121,10 @@ puts reopened.image_url
 
 `from_url` raises `ArgumentError` for relative paths, URLs outside the trusted origin,
 and pages that load successfully but do not contain an illustration post.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for notable changes in each release.
 
 ## Contributing
 

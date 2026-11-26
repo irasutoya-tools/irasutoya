@@ -85,4 +85,48 @@ RSpec.describe Irasutoya::Category do
     expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
     expect(http).to have_received(:request_get).with(redirect_path).once
   end
+
+  context 'when the list URL has an empty path' do
+    let(:category) { described_class.new(title: '猫', list_url: 'https://www.irasutoya.com') }
+    let(:root_page) do
+      <<~HTML
+        <div class="box">
+          <a href="/2018/09/cat-1.html">Image</a><a href="/2018/09/cat-1.html">Sleeping cat</a>
+        </div>
+        <a class="blog-pager-older-link" href="/">Next</a>
+      HTML
+    end
+
+    it 'fetches and yields the root listing once when its older-results link points to /' do
+      stub_html(http, root_page, path: '/')
+
+      expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
+      expect(http).to have_received(:request_get).with('/').once
+    end
+
+    it 'fetches and yields the listing once when it is reached through a redirect' do
+      redirected_category = described_class.new(title: '猫', list_url: 'https://www.irasutoya.com/old-path')
+      response = Net::HTTPFound.new('1.1', '302', 'Found')
+      response['Location'] = 'https://www.irasutoya.com'
+      response['Content-Length'] = '0'
+      allow(response).to receive(:read_body)
+      allow(http).to receive(:request_get).with('/old-path').and_yield(response).and_return(response)
+      stub_html(http, root_page, path: '/')
+
+      expect(redirected_category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
+      expect(http).to have_received(:request_get).with('/old-path').once
+      expect(http).to have_received(:request_get).with('/').once
+    end
+
+    it 'advances to the next page when the older-results link to the root carries a distinct query' do
+      distinct_path = '/?start=10'
+      html = root_page.sub('href="/"', %(href="#{distinct_path}"))
+      stub_html(http, html, path: '/')
+      stub_html(http, File.read('spec/files/category_last_page.html'), path: distinct_path)
+
+      expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat', 'Walking cat'])
+      expect(http).to have_received(:request_get).with('/').once
+      expect(http).to have_received(:request_get).with(distinct_path).once
+    end
+  end
 end
