@@ -17,7 +17,7 @@ module Irasutoya
       load_detail(url)
     end
 
-    # rubocop:disable-next-line Metrics/ParameterLists
+    # rubocop:disable-next Metrics/ParameterLists
     def initialize(url:, title:, description:, image_urls:, categories: [], published_on: nil)
       @url = url
       @title = title
