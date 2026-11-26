@@ -25,7 +25,7 @@ module Irasutoya
         uri = URI.parse(url)
         return unless trusted_page_origin?(uri)
 
-        URI::HTTPS.build(host: TRUSTED_HOST, path: uri.path, query: uri.query).to_s
+        "https://#{TRUSTED_HOST}#{uri.request_uri}"
       rescue URI::Error
         nil
       end

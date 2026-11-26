@@ -123,6 +123,11 @@ RSpec.describe Irasutoya::Modules::HasDocumentFetcher do
         .to eq('https://www.irasutoya.com/search?q=cat')
     end
 
+    it 'normalizes an empty path to the same key as a slash root path' do
+      expect(described_class.trusted_request_url('https://www.irasutoya.com'))
+        .to eq(described_class.trusted_request_url('https://www.irasutoya.com/'))
+    end
+
     it 'drops the fragment' do
       expect(described_class.trusted_request_url('https://www.irasutoya.com/search#top'))
         .to eq('https://www.irasutoya.com/search')
