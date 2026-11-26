@@ -118,7 +118,9 @@ module Irasutoya
 
       def alternate_url(entry)
         links = entry&.[]('link')
-        link = links&.find { |candidate| candidate['rel'] == 'alternate' && trusted_feed_url?(candidate['href']) }
+        return nil unless links.is_a?(Array)
+
+        link = links.find { |candidate| candidate.is_a?(Hash) && candidate['rel'] == 'alternate' && trusted_feed_url?(candidate['href']) }
         link&.fetch('href')
       end
 

@@ -502,6 +502,50 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(described_class.random.url).to eq(show_url)
     end
 
+    it 'skips a null link element and uses the valid alternate link without refreshing the feed' do
+      feed = {
+        'openSearch$totalResults' => { '$t' => feed_count.to_s },
+        'entry' => [{ 'link' => [nil, { 'rel' => 'alternate', 'href' => show_url }] }]
+      }
+      response = jsonp_response("callback(#{JSON.generate('feed' => feed)});")
+      expect(page_http).to receive(:request_get).with(feed_path(1)).once.ordered
+                                                .and_yield(response).and_return(response)
+      expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).once.ordered
+
+      expect(described_class.random.url).to eq(show_url)
+    end
+
+    context 'when the selected feed entry only has malformed link elements' do
+      let(:feed_count) { 1 }
+      let(:feed_body) do
+        feed = {
+          'openSearch$totalResults' => { '$t' => '1' },
+          'entry' => [{ 'link' => [nil, 'not-a-hash'] }]
+        }
+        "callback(#{JSON.generate('feed' => feed)});"
+      end
+
+      it 'refreshes once and loads the detail page from the refreshed entry' do
+        refreshed_feed = {
+          'openSearch$totalResults' => { '$t' => '1' },
+          'entry' => [{ 'link' => [nil, { 'rel' => 'alternate', 'href' => show_url }] }]
+        }
+        refreshed_response = jsonp_response("callback(#{JSON.generate('feed' => refreshed_feed)});")
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+        expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(refreshed_response)
+        expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).ordered
+
+        expect(described_class.random.url).to eq(show_url)
+      end
+
+      it 'reports the feed error after two selections without a usable link' do
+        expect(page_http).to receive(:request_get).with(feed_path(1)).twice.and_yield(feed_response)
+        expect(page_http).not_to receive(:request_get).with(URI.parse(show_url).request_uri)
+
+        expect { described_class.random }.to raise_error(RuntimeError, 'Illustration feed has no usable post URL')
+      end
+    end
+
     it 'should return random irasuto with title' do
       expect(Irasutoya::Irasuto.random.title).to eq('太った少年のイラスト（肥満）')
     end
