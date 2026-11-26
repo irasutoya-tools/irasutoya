@@ -122,6 +122,10 @@ puts reopened.image_url
 `from_url` raises `ArgumentError` for relative paths, URLs outside the trusted origin,
 and pages that load successfully but do not contain an illustration post.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for notable changes in each release.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/irasutoya-tools/irasutoya. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
