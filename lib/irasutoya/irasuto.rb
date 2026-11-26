@@ -17,6 +17,7 @@ module Irasutoya
       load_detail(url)
     end
 
+    # rubocop:disable Metrics/ParameterLists
     def initialize(url:, title:, description:, image_urls:, categories: [], published_on: nil)
       @url = url
       @title = title
@@ -25,6 +26,7 @@ module Irasutoya
       @categories = categories.dup
       @published_on = published_on
     end
+    # rubocop:enable Metrics/ParameterLists
 
     def categories
       @categories.dup

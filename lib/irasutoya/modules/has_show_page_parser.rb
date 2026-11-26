@@ -45,10 +45,11 @@ module Irasutoya
 
           def published_on_from(post:)
             text = post.at_css('.entry-post-date')&.text.to_s
-            match = text.match(/(\d{4})\/(\d{2})\/(\d{2})/)
+            match = text.match(%r{(\d{4})/(\d{2})/(\d{2})})
             return unless match
 
-            Date.new(*match.captures.map(&:to_i))
+            year, month, day = match.captures.map(&:to_i)
+            Date.new(year, month, day)
           rescue ArgumentError
             nil
           end
