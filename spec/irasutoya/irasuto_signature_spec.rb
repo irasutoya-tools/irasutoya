@@ -26,6 +26,10 @@ RSpec.describe 'Irasutoya::Irasuto class method signatures' do
     expect(return_type(:parse_show_page).optional_fields).to have_key(:categories)
   end
 
+  it 'allows detail parser overrides to omit the published date' do
+    expect(return_type(:parse_show_page).optional_fields).to have_key(:published_on)
+  end
+
   it 'keeps the random helpers private in Ruby and RBS' do
     helpers = %i[fetch_feed load_initial_random_post load_refreshed_random_post]
 

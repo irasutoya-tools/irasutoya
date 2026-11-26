@@ -10,19 +10,20 @@ module Irasutoya
     FEED_COUNT_TTL = 300
     FEED_COUNT_CACHE = FeedCountCache.new(ttl: FEED_COUNT_TTL) { fetch_feed_count }
 
-    attr_reader :url, :title, :description
+    attr_reader :url, :title, :description, :published_on
 
     def self.from_url(url)
       validate_input_url(url)
       load_detail(url)
     end
 
-    def initialize(url:, title:, description:, image_urls:, categories: [])
+    def initialize(url:, title:, description:, image_urls:, categories: [], published_on: nil)
       @url = url
       @title = title
       @description = description
       @image_urls = image_urls.dup
       @categories = categories.dup
+      @published_on = published_on
     end
 
     def categories

@@ -3,6 +3,7 @@
 target :lib do
   signature 'sig'
   library 'cgi'
+  library 'date'
   library 'json'
   library 'net-http'
   library 'open-uri'
