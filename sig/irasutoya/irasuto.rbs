@@ -1,6 +1,7 @@
 module Irasutoya
   class Irasuto
     MAX_FEED_BYTES: Integer
+    MAX_IMAGE_BYTES: Integer
     FEED_COUNT_TTL: Integer
     FEED_COUNT_CACHE: FeedCountCache
 
@@ -23,6 +24,7 @@ module Irasutoya
     def image_url: -> String?
     def postthumb_image_url: -> String?
     def has_multiple_images: -> bool
+    def download_image: (String path, ?index: Integer) -> Integer
 
     def initialize: (url: String, title: String, description: String, image_urls: Array[String], ?categories: Array[Category]) -> void
     def self.from_url: (String url) -> Irasuto

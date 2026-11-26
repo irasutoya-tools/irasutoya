@@ -7,6 +7,7 @@ module Irasutoya
     include Modules::HasShowPageParser
 
     MAX_FEED_BYTES = 1024 * 1024
+    MAX_IMAGE_BYTES = 10 * 1024 * 1024
     FEED_COUNT_TTL = 300
     FEED_COUNT_CACHE = FeedCountCache.new(ttl: FEED_COUNT_TTL) { fetch_feed_count }
 
@@ -43,6 +44,14 @@ module Irasutoya
 
     def has_multiple_images # rubocop:disable Naming/PredicateMethod, Naming/PredicatePrefix
       @image_urls.size > 1
+    end
+
+    def download_image(path, index: 0)
+      with_fetch_timeout do
+        url = @image_urls.fetch(index) { raise ArgumentError, "No image at index #{index}" }
+        body, = ResponseFetcher.get(url, max_bytes: MAX_IMAGE_BYTES)
+        File.binwrite(path, body)
+      end
     end
 
     class << self
