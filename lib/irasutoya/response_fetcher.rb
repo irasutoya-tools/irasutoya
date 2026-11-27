@@ -23,7 +23,7 @@ module Irasutoya
     def self.request(uri, max_bytes, follow_redirects)
       body = ''.b
       response = HTTP_TRANSPORT.request(uri) do |http, reply|
-        return reply.fetch('location') if follow_redirects && RedirectFollower::REDIRECT_CODES.include?(reply.code)
+        return redirect_location(reply) if follow_redirects && RedirectFollower::REDIRECT_CODES.include?(reply.code)
 
         reply.value
         body = read_body(http, reply, max_bytes)
@@ -31,6 +31,14 @@ module Irasutoya
       [body, response['content-type']]
     end
     private_class_method :request
+
+    def self.redirect_location(reply)
+      location = reply['location']
+      return location unless location.nil? || location.strip.empty?
+
+      raise IOError, "HTTP redirect (#{reply.code}) with missing or blank Location header"
+    end
+    private_class_method :redirect_location
 
     # Allows any HTTP(S) host but rejects an https -> http scheme downgrade. HttpDocument applies
     # a stricter, trusted-host-only policy instead; see Modules::HasDocumentFetcher::HttpDocument.
