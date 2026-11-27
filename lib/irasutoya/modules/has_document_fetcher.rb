@@ -2,19 +2,16 @@
 
 require 'stringio'
 require 'timeout'
+require 'irasutoya/modules/dual_level'
 
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      include Irasutoya::Modules::DualLevel
+
       TRUSTED_HOST = 'www.irasutoya.com'
       FETCH_TIMEOUT = 10
       MAX_HTML_BYTES = 4 * 1024 * 1024
-
-      def self.included(klass)
-        super
-        klass.send(:include, Irasutoya::Modules::HasDocumentFetcher::Methods)
-        klass.send(:extend, Irasutoya::Modules::HasDocumentFetcher::Methods)
-      end
 
       def self.trusted_page_origin?(uri)
         uri.is_a?(URI::HTTP) && uri.host&.casecmp?(TRUSTED_HOST) == true &&

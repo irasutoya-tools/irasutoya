@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
+require 'irasutoya/modules/dual_level'
+
 module Irasutoya
   module Modules
     module HasShowPageParser
-      def self.included(klass)
-        super
-        klass.send(:include, Irasutoya::Modules::HasShowPageParser::Methods)
-        klass.send(:extend, Irasutoya::Modules::HasShowPageParser::Methods)
-      end
+      include Irasutoya::Modules::DualLevel
 
       module Methods
         def parse_show_page(document:, url: (document.url if document.respond_to?(:url)))
