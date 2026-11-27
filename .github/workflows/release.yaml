@@ -45,4 +45,4 @@ jobs:
           bundle install --local
           git add .
           git commit --amend --no-edit
-      - uses: rubygems/release-gem@5c53f5308233b7c0f47411f0471b3faae6fa57b2 # v1
+      - uses: rubygems/release-gem@2654a0fe0dc39725c07fe84d7fe863a084f2424e # v1
