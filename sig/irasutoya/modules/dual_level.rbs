@@ -3,7 +3,7 @@ module Irasutoya
     module DualLevel
       def self.included: (Module) -> void
 
-      module ClassMethods
+      module ClassMethods : Module
         def included: (Class) -> void
       end
     end

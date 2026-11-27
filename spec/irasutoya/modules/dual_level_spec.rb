@@ -14,7 +14,8 @@ RSpec.describe Irasutoya::Modules::DualLevel do
   end
 
   it 'makes the Methods submodule available as both instance and class methods of the including class' do
-    klass = Class.new { include has_greeting }
+    greeting_module = has_greeting
+    klass = Class.new { include greeting_module }
 
     expect(klass.new.greeting).to eq('hello')
     expect(klass.greeting).to eq('hello')
