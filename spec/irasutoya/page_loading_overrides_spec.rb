@@ -107,8 +107,9 @@ RSpec.describe 'Page loading overrides' do
     include_examples 'detail post validation'
 
     it 'uses the receiver fetch_feed_count override instead of the base class feed count fetch' do
+      expected_detail_url = detail_url
       receiver.define_singleton_method(:fetch_feed_count) do
-        [1, { 'entry' => [{ 'link' => [{ 'rel' => 'alternate', 'href' => detail_url }] }] }]
+        [1, { 'entry' => [{ 'link' => [{ 'rel' => 'alternate', 'href' => expected_detail_url }] }] }]
       end
       allow(Random).to receive(:rand).with(1).and_return(0)
       expect(Irasutoya::ResponseFetcher).not_to receive(:get)
@@ -121,7 +122,7 @@ RSpec.describe 'Page loading overrides' do
       end
 
       expect(illustration).to have_attributes(url: detail_url, title: 'Custom title',
-                                               description: 'Custom description')
+                                              description: 'Custom description')
     end
   end
 
