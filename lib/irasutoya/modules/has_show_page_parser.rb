@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'date'
 require 'irasutoya/modules/dual_level'
 
 module Irasutoya
@@ -10,13 +11,14 @@ module Irasutoya
       module Methods
         def parse_show_page(document:, url: (document.url if document.respond_to?(:url)))
           post = document.at_css('.post')
-          return { title: '', description: '', image_urls: [], categories: [] } unless post
+          return { title: '', description: '', image_urls: [], categories: [], published_on: nil } unless post
 
           {
             title: post.at_css('.title h2')&.text.to_s.strip,
             description: post.css('.entry .separator').last&.text.to_s.strip,
             image_urls: PrivateMethods.image_urls_from(post: post, url: url),
-            categories: PrivateMethods.categories_from(post: post, url: url)
+            categories: PrivateMethods.categories_from(post: post, url: url),
+            published_on: PrivateMethods.published_on_from(post: post)
           }
         end
       end
@@ -36,6 +38,17 @@ module Irasutoya
 
               resolve_image_url(source, url)
             end
+          end
+
+          def published_on_from(post:)
+            text = post.at_css('.entry-post-date')&.text.to_s
+            match = text.match(%r{(\d{4})/(\d{2})/(\d{2})})
+            return unless match
+
+            year, month, day = match.captures.map(&:to_i)
+            Date.new(year, month, day)
+          rescue ArgumentError
+            nil
           end
 
           private

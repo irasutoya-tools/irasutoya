@@ -6,6 +6,7 @@ RSpec.describe 'Irasutoya::Irasuto class method signatures' do
   let(:irasuto) { Irasutoya::Irasuto }
   let(:builder) do
     loader = RBS::EnvironmentLoader.new
+    loader.add(library: 'date')
     loader.add(path: Pathname(__dir__).join('../../sig'))
     environment = RBS::Environment.from_loader(loader).resolve_type_names
     RBS::DefinitionBuilder.new(env: environment)
@@ -24,6 +25,10 @@ RSpec.describe 'Irasutoya::Irasuto class method signatures' do
 
   it 'allows detail parser overrides to omit categories' do
     expect(return_type(:parse_show_page).optional_fields).to have_key(:categories)
+  end
+
+  it 'allows detail parser overrides to omit the published date' do
+    expect(return_type(:parse_show_page).optional_fields).to have_key(:published_on)
   end
 
   it 'keeps the random helpers private in Ruby and RBS' do

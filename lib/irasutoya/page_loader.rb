@@ -27,7 +27,7 @@ module Irasutoya
       raise ArgumentError, 'URL does not point to an Irasutoya illustration post' if title.empty? || !image_urls.first
 
       Irasuto.new(url: url, title: title, description: parsed.fetch(:description), image_urls: image_urls,
-                  categories: parsed.fetch(:categories, []))
+                  categories: parsed.fetch(:categories, []), published_on: parsed.fetch(:published_on, nil))
     end
 
     def self.effective_url(document, requested_url)

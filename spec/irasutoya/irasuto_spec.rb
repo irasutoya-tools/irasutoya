@@ -11,7 +11,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         url: url,
         title: '太った少年のイラスト（肥満）',
         description: '標準体重よりも少し太った小学生～中学生くらいの少年（肥満児）のイラストです。',
-        image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png'
+        image_url: 'https://4.bp.blogspot.com/-7Pa9IazPoII/VGLMYk-SjpI/AAAAAAAAo_s/IryhUKoFJQ0/s400/himan03_youngman.png',
+        published_on: Date.new(2014, 12, 9)
       )
       expect(http).to have_received(:request_get).with('/2014/03/blog-post_5924.html').twice
     end
@@ -92,7 +93,8 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
         description: 'Illustration caption',
         image_urls: ['https://www.irasutoya.com/2014/03/art.png'],
         categories: [],
-        has_multiple_images: false
+        has_multiple_images: false,
+        published_on: nil
       )
     end
 
@@ -166,6 +168,22 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect(illustration.image_url).to eq('first')
       expect(illustration.postthumb_image_url).to eq('first')
       expect(illustration.has_multiple_images).to be(true)
+    end
+  end
+
+  describe '#published_on' do
+    it 'defaults to nil when the constructor omits it' do
+      illustration = described_class.new(url: 'page', title: 'Title', description: 'Description',
+                                         image_urls: ['first'])
+
+      expect(illustration.published_on).to be_nil
+    end
+
+    it 'returns the date passed to the constructor' do
+      illustration = described_class.new(url: 'page', title: 'Title', description: 'Description',
+                                         image_urls: ['first'], published_on: Date.new(2026, 11, 26))
+
+      expect(illustration.published_on).to eq(Date.new(2026, 11, 26))
     end
   end
 
