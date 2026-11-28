@@ -18,11 +18,8 @@ module Irasutoya
       # Keep registration and cleanup atomic with respect to the fetch deadline.
       with_count_interrupt(:never) do
         pending = @lock.synchronize do
-          result = wait_for_current_refresh
+          result = cached_or_shared_result(stale_count)
           return result if result
-
-          count = cached_count
-          return [count, nil] if count && count != stale_count
 
           @refresh = FeedCountRefresh.new(Process.pid)
         end
@@ -37,12 +34,17 @@ module Irasutoya
       count if expires_at && clock_time < expires_at
     end
 
-    def wait_for_current_refresh
-      while (current = @refresh) && current.pid == Process.pid
+    def cached_or_shared_result(stale_count)
+      loop do
+        count = cached_count
+        return [count, nil] if count && count != stale_count
+
+        current = @refresh
+        return unless current && current.pid == Process.pid
+
         result = wait_for_refresh(current)
         return result if result
       end
-      nil
     end
 
     def wait_for_refresh(refresh)

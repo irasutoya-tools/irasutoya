@@ -81,6 +81,27 @@ RSpec.describe Irasutoya::FeedCountCache do
     expect(requests.size).to eq(0)
   end
 
+  it 'serves a valid cache hit while a forced refresh is blocked and later fails' do
+    cache = new_cache
+    release << [10, {}]
+    cache.fetch
+    pop(requests)
+
+    leader = start_worker(cache, stale_count: 10)
+    pop(requests)
+    follower = start_waiter(cache, stale_count: 10)
+    reader = start_worker(cache)
+    expect(result(reader)).to eq([10, nil])
+
+    error = IOError.new('Count request failed')
+    release << error
+    expect([result(leader), result(follower)]).to eq([error, error])
+    expect(cache.fetch).to eq([10, nil])
+    expect(requests.size).to eq(0)
+  ensure
+    [leader, follower, reader].compact.each { |worker| worker.kill.join }
+  end
+
   it 'lets waiters start one replacement when the initiating refresh deadline expires' do
     cache = new_cache
 
