@@ -9,6 +9,13 @@ module Irasutoya
     MAX_FEED_BYTES = 1024 * 1024
     MAX_IMAGE_BYTES = 10 * 1024 * 1024
     FEED_COUNT_TTL = 300
+    # Deliberately process-wide shared state: every Irasuto subclass inherits this one
+    # cache instance, so a count refresh and its TTL are shared across the whole class
+    # hierarchy rather than kept separately per subclass. The block below is only a
+    # structural fallback for FeedCountCache's required initializer; every real call
+    # (see `random_entry`) passes its own `fetch:` lambda built at call time, so a
+    # subclass's `fetch_feed_count` override is what actually runs a refresh, even
+    # though the resulting count and in-flight refresh are shared with every subclass.
     FEED_COUNT_CACHE = FeedCountCache.new(ttl: FEED_COUNT_TTL) { fetch_feed_count }
 
     attr_reader :url, :title, :description
@@ -144,7 +151,7 @@ module Irasutoya
       end
 
       def random_entry(stale_count: nil)
-        count, first_feed = FEED_COUNT_CACHE.fetch(stale_count: stale_count)
+        count, first_feed = FEED_COUNT_CACHE.fetch(stale_count: stale_count, fetch: -> { fetch_feed_count })
         raise 'Illustration feed has no entries' if count.zero?
 
         index = Random.rand(count) + 1

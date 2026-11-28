@@ -28,6 +28,12 @@ fetcher still applies its own trust policy to the redirect target.
 `Irasuto.random` picks an entry's index from the feed's post count. [`FeedCountCache`][feed-count-cache]
 coalesces concurrent count refreshes behind a short-lived cache, so simultaneous
 `Irasuto.random` calls share one refresh instead of issuing concurrent feed requests.
+The cache instance itself is deliberately process-wide: `Irasuto` and every subclass
+inherit the same `FEED_COUNT_CACHE` constant, so the cached count, its TTL, and the
+in-flight refresh are shared across the whole class hierarchy. A subclass's own
+`fetch_feed_count` override still runs the refresh, because `random_entry` builds the
+fetch callable from the actual receiver at call time instead of relying on the cache's
+own fallback block.
 
 ## Find the relevant specs
 

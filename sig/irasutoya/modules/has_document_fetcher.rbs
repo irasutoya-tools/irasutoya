@@ -1,11 +1,11 @@
 module Irasutoya
   module Modules
     module HasDocumentFetcher
+      extend DualLevel::ClassMethods
+
       TRUSTED_HOST: String
       FETCH_TIMEOUT: Integer
       MAX_HTML_BYTES: Integer
-
-      def self.included: (Class) -> void
 
       def self.trusted_page_origin?: (URI::Generic) -> bool
 

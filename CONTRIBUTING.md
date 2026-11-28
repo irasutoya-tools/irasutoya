@@ -33,3 +33,9 @@ The scraping specs use saved HTML and feed responses in [`spec/files/`](spec/fil
 2. Make a focused change and run the checks above.
 3. Commit with a Conventional Commit subject, such as `docs: clarify installation`.
 4. Push your branch to your fork and open a pull request against `irasutoya-tools/irasutoya:master`. Describe what changed, why, and which checks you ran. Link a related issue if there is one.
+
+## Release a new version
+
+Update `lib/irasutoya/version.rb` and `CHANGELOG.md`, then run `bundle lock` to update the version in `Gemfile.lock`. Submit those changes in a pull request.
+
+Once the release commit is on `master` and CI has passed, push a matching tag in the form `vMAJOR.MINOR.PATCH` to the upstream repository. The [release workflow](.github/workflows/release.yaml) validates the tag against the gem version, builds the gem, and publishes it to RubyGems.org.

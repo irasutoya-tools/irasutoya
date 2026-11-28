@@ -90,6 +90,20 @@ RSpec.describe Irasutoya::ResponseFetcher do
     end
   end
 
+  it 'rejects a redirect with no Location header' do
+    with_response('Content-Length: 0', '', status: '302 Found') do |url|
+      expect { described_class.get(url, max_bytes: 10) }
+        .to raise_error(IOError, 'HTTP redirect (302) with missing or blank Location header')
+    end
+  end
+
+  it 'rejects a redirect with a whitespace-only Location header' do
+    with_response("Location:    \r\nContent-Length: 0", '', status: '302 Found') do |url|
+      expect { described_class.get(url, max_bytes: 10) }
+        .to raise_error(IOError, 'HTTP redirect (302) with missing or blank Location header')
+    end
+  end
+
   it 'follows redirects without downloading their bodies' do
     with_response('Content-Length: 2', 'ok') do |target|
       headers = "Location: #{target}\r\nContent-Length: 9999999"

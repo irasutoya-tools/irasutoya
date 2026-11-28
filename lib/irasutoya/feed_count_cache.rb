@@ -14,7 +14,7 @@ module Irasutoya
       @ready = ConditionVariable.new
     end
 
-    def fetch(stale_count: nil)
+    def fetch(stale_count: nil, fetch: @fetch)
       # Keep registration and cleanup atomic with respect to the fetch deadline.
       with_count_interrupt(:never) do
         pending = @lock.synchronize do
@@ -26,7 +26,7 @@ module Irasutoya
 
           @refresh = FeedCountRefresh.new(Process.pid)
         end
-        refresh_count(pending)
+        refresh_count(pending, fetch)
       end
     end
 
@@ -57,8 +57,8 @@ module Irasutoya
       refresh.result || raise(IOError, 'Feed count refresh interrupted')
     end
 
-    def refresh_count(refresh)
-      result = with_count_interrupt(:immediate) { fetch_and_cache }
+    def refresh_count(refresh, fetch)
+      result = with_count_interrupt(:immediate) { fetch_and_cache(fetch) }
       refresh.result = result
     rescue StandardError => e
       refresh.error = e
@@ -74,8 +74,8 @@ module Irasutoya
       end
     end
 
-    def fetch_and_cache
-      count, feed = @fetch.call
+    def fetch_and_cache(fetch)
+      count, feed = fetch.call
       @cache = count.positive? ? [count, clock_time + @ttl] : nil
       [count, feed]
     end

@@ -1,7 +1,7 @@
 module Irasutoya
   module Modules
     module HasListPageParser
-      def self.included: (Class) -> void
+      extend DualLevel::ClassMethods
 
       type card = { title: String, show_url: String, thumbnail_url: String? }
 
