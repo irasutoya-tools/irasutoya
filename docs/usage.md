@@ -30,9 +30,14 @@ An `IrasutoLink` exposes `title`, `show_url`, and `thumbnail_url`. The thumbnail
 Categories are read from the detail page with no additional request. Use
 `illustration.categories.first&.each_irasuto_link&.take(5)` to browse up to five illustrations in the first category.
 
+Call `illustration.download_image(path, index: 0)` to fetch the image at `image_urls[index]` and write it to
+`path` in binary mode. It returns the number of bytes written, shares the same 10-second deadline and
+`Irasutoya::ResponseTooLargeError` protection as other fetches (capped at 10 MiB), and raises `ArgumentError`
+when `index` is outside the range of `image_urls`.
+
 ## Fetch behavior
 
 - `from_url` accepts absolute HTTP and HTTPS URLs on `www.irasutoya.com` with the default port and no embedded credentials. The request uses HTTPS. A relative URL, an untrusted origin, or a successfully loaded page without a title or image URL raises `ArgumentError`.
 - Fetches raise `Timeout::Error` when they exceed the 10-second limit. A call to `Irasuto.search` shares one deadline across its page requests. Lazy enumeration gives each listing page its own deadline. A random lookup shares one deadline across its feed and detail requests.
 - Lazy enumeration stops at the end of the results or when pagination revisits a listing page.
-- HTML responses are capped at 4 MiB and feed responses at 1 MiB. The limits apply after decompression, and exceeding either limit raises `Irasutoya::ResponseTooLargeError`.
+- HTML responses are capped at 4 MiB, feed responses at 1 MiB, and image downloads at 10 MiB. The limits apply after decompression, and exceeding any of them raises `Irasutoya::ResponseTooLargeError`.

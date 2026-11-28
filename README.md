@@ -61,7 +61,7 @@ See the [Ruby API reference](docs/usage.md) for pagination, return values, and f
 See [Troubleshooting](docs/troubleshooting.md) for empty results and fetch errors.
 
 Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
-HTML responses are limited to 4 MiB and feed responses to 1 MiB. Fetch operations raise
+HTML responses are limited to 4 MiB, feed responses to 1 MiB, and image downloads to 10 MiB. Fetch operations raise
 `Irasutoya::ResponseTooLargeError` when a response exceeds its limit after decompression.
 
 ```ruby
@@ -74,6 +74,7 @@ irasuto.image_url
 irasuto.image_urls
 irasuto.has_multiple_images
 irasuto.postthumb_image_url
+irasuto.download_image('illustration.png') #=> downloads image_url to disk
 
 irasuto_links = Irasutoya::Irasuto.search(query: 'おじさん', page: 3) #=> returns array of IrasutoLink instance
 

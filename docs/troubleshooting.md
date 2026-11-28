@@ -26,3 +26,14 @@ Use an absolute post URL on `www.irasutoya.com` with the default port and no
 embedded credentials. If you already have a search result, pass its `show_url`
 or call `fetch_irasuto` on it directly. A page that loads without a post title
 or an image URL also raises `ArgumentError`.
+
+## Why did `download_image` raise `ArgumentError`?
+
+The `index` keyword must be a valid index into `image_urls`. Check
+`illustration.image_urls.size` (or use the default `index: 0`) before
+downloading an image at another index.
+
+## Why did `download_image` raise `Irasutoya::ResponseTooLargeError`?
+
+The image exceeded the 10 MiB download cap. This mirrors the caps already
+applied to HTML and feed fetches; see [Fetch behavior](usage.md#fetch-behavior).
