@@ -13,6 +13,12 @@
 
 `Irasutoya` is ruby library for [いらすとや](https://www.irasutoya.com)
 
+## Features
+
+- Search Irasutoya illustrations by keyword.
+- Browse illustrations by category or open a random post.
+- Read a post's title, description, and image URLs.
+
 ## Installation
 
 Irasutoya requires Ruby 3.3 or later.
