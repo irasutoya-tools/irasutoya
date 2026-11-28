@@ -339,6 +339,17 @@ RSpec.describe Irasutoya::Irasuto do # rubocop:disable Metrics/BlockLength
       expect { described_class.random }.to raise_error(TypeError, 'no implicit conversion of nil into String')
     end
 
+    it 'rejects a non-integer feed count and retries the count on the next lookup' do
+      invalid_response = jsonp_response('callback({"feed":{"openSearch$totalResults":{"$t":"12.5"}}});')
+      expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(invalid_response)
+      expect(page_http).to receive(:request_get).with(feed_path(1)).ordered.and_yield(feed_response)
+      expect(Random).to receive(:rand).with(feed_count).once.and_return(0)
+      expect(page_http).to receive(:request_get).with(URI.parse(show_url).request_uri).once.ordered
+
+      expect { described_class.random }.to raise_error(ArgumentError, /invalid value for Integer.*12\.5/)
+      expect(described_class.random.url).to eq(show_url)
+    end
+
     it 'reports an empty feed without choosing an index or fetching a detail page' do
       empty_feed = 'callback({"feed":{"openSearch$totalResults":{"$t":"0"}}});'
       allow(feed_response).to receive(:read_body).and_yield(empty_feed)
