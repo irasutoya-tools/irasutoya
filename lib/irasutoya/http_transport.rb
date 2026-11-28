@@ -99,6 +99,48 @@ module Irasutoya
     private_class_method :inflate_members
   end
 
+  class SessionWaiters
+    def initialize
+      @queues = {}
+    end
+
+    # The caller holds the pool lock for both waiting and notification.
+    def wait(key, lock)
+      waiter = ConditionVariable.new
+      queue = (@queues[key] ||= {})
+      queue[waiter] = true
+      wait_interruptibly(waiter, lock)
+      completed = true
+    ensure
+      finish_wait(key, queue, waiter, completed)
+    end
+
+    def notify(key)
+      queue = @queues[key]
+      return unless queue
+
+      queue.shift&.first&.signal
+      @queues.delete(key) if queue.empty?
+    end
+
+    private
+
+    def wait_interruptibly(waiter, lock)
+      # @type var thread: untyped
+      thread = Thread
+      thread.handle_interrupt(FetchDeadlineExceeded => :immediate) { waiter.wait(lock) }
+    end
+
+    def finish_wait(key, queue, waiter, completed)
+      if queue.delete(waiter)
+        @queues.delete(key) if queue.empty?
+      elsif !completed
+        # Pass on the notification if the selected waiter expired before acquiring.
+        notify(key)
+      end
+    end
+  end
+
   class HttpSessionPool
     MAX_CONNECTIONS_PER_ORIGIN = 4
 
@@ -140,7 +182,7 @@ module Irasutoya
 
       @max_connections = max_connections
       @lock = Mutex.new
-      @available = ConditionVariable.new
+      @waiters = SessionWaiters.new
       @sessions = {}
       @proxy_decisions = ProxyDecisions.new
     end
@@ -178,7 +220,7 @@ module Irasutoya
           sessions = (@sessions[key] ||= {})
           session = idle_session(sessions)
           session ||= new_session(key) if sessions.size < @max_connections
-          next wait_for_session unless session
+          next @waiters.wait(key, @lock) unless session
 
           sessions[session] = true
           return session
@@ -194,17 +236,10 @@ module Irasutoya
       HttpSession.new { |session| remove_idle_session(key, session) }
     end
 
-    def wait_for_session
-      # A fetch may expire while waiting, before it has a session to release.
-      # @type var thread: untyped
-      thread = Thread
-      thread.handle_interrupt(FetchDeadlineExceeded => :immediate) { @available.wait(@lock) }
-    end
-
     def release_session(key, session)
       @lock.synchronize do
         @sessions.fetch(key)[session] = false
-        @available.broadcast
+        @waiters.notify(key)
       end
     end
 
@@ -213,9 +248,9 @@ module Irasutoya
         sessions = @sessions.fetch(key)
         return false if sessions.fetch(session)
 
+        # Removing an idle session leaves the same capacity available.
         sessions.delete(session)
         @sessions.delete(key) if sessions.empty?
-        @available.broadcast
         true
       end
     end
@@ -307,6 +342,6 @@ module Irasutoya
   end
 
   Process.singleton_class.prepend(ForkCleanup) if Process.respond_to?(:_fork)
-  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :ProxyDecisions, :GzipResponse, :HttpSessionPool,
-                   :HttpSession, :HTTP_TRANSPORT, :ForkCleanup
+  private_constant :FetchDeadlineExceeded, :ChunkedReadDeadline, :ProxyDecisions, :GzipResponse,
+                   :SessionWaiters, :HttpSessionPool, :HttpSession, :HTTP_TRANSPORT, :ForkCleanup
 end
