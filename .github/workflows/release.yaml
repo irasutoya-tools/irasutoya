@@ -1,16 +1,12 @@
 name: release
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Release version
-        required: true
-        type: choice
-        options:
-           - major
-           - minor
-           - patch
+'on':
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
 jobs:
   push:
     name: Push gem to RubyGems.org
@@ -18,31 +14,24 @@ jobs:
     environment:
       name: release
     permissions:
+      contents: read
       id-token: write
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Ruby
         uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
         with:
           bundler-cache: true
           ruby-version: .ruby-version
-      - name: Setup Git
+      - name: Verify release tag
         run: |
-          git config --global user.email "unhappychoice@gmail.com"
-          git config --global user.name "Yuji Ueki"
-      - name: Bump version
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
-        run: |
-          git status
-          # Load the locked command directly so RubyGems plugin discovery is not needed.
-          BUNDLE_FROZEN=true bundle exec ruby -rrubygems/command -rgem/release -rrubygems/commands/bump_command \
-            -e 'Gem::Commands::BumpCommand.new.invoke(*ARGV)' -- \
-            --version "$RELEASE_VERSION" --message ':tada: Bump %{name} to %{version}'
-          git status
-          bundle config set frozen false
-          bundle install --local
-          git add .
-          git commit --amend --no-edit
+          ruby -e '
+            tag = ENV.fetch("GITHUB_REF_NAME")
+            version = Gem::Specification.load("irasutoya.gemspec").version.to_s
+            unless tag.match?(/\Av(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z/) && tag == "v#{version}"
+              abort "Release tag #{tag.inspect} must be a stable version matching the gemspec (v#{version})."
+            end
+          '
       - uses: rubygems/release-gem@2654a0fe0dc39725c07fe84d7fe863a084f2424e # v1
