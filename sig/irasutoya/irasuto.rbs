@@ -28,8 +28,8 @@ module Irasutoya
     def self.from_url: (String url) -> Irasuto
     def self.random: -> Irasuto
     def self.search: (query: String, ?page: Integer) -> Array[IrasutoLink]
-    def self.each_search_result: (query: String) -> Enumerator[IrasutoLink, void]
-                               | (query: String) { (IrasutoLink) -> void } -> void
+    def self.each_search_result: (query: String, ?max_pages: Integer) -> Enumerator[IrasutoLink, void]
+                               | (query: String, ?max_pages: Integer) { (IrasutoLink) -> void } -> void
     private def self.search_url: (String) -> String
     private def self.validate_input_url: (String) -> void
     private def self.fetch_feed: (Integer) -> Hash[String, untyped]

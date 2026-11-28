@@ -53,13 +53,14 @@ module Irasutoya
       )
     end
 
-    def each_irasuto_link(&block)
-      return enum_for(:each_irasuto_link) unless block
+    def each_irasuto_link(max_pages: PageLoader::DEFAULT_MAX_PAGES, &block)
+      return enum_for(:each_irasuto_link, max_pages: max_pages) unless block
 
       PageLoader.each_list_link(
         list_url,
         fetch: ->(page_url) { fetch_page_and_parse(page_url) },
         parse: ->(document:) { list_page_entries(document: document) },
+        max_pages: max_pages,
         &block
       )
     end

@@ -71,13 +71,14 @@ module Irasutoya
         end
       end
 
-      def each_search_result(query:, &block)
-        return enum_for(:each_search_result, query: query) unless block
+      def each_search_result(query:, max_pages: PageLoader::DEFAULT_MAX_PAGES, &block)
+        return enum_for(:each_search_result, query: query, max_pages: max_pages) unless block
 
         PageLoader.each_list_link(
           search_url(query),
           fetch: ->(page_url) { fetch_page_and_parse(page_url) },
           parse: ->(document:) { list_page_entries(document: document) },
+          max_pages: max_pages,
           &block
         )
       end

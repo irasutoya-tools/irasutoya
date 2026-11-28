@@ -1,5 +1,9 @@
 module Irasutoya
+  class PageLimitExceededError < StandardError
+  end
+
   module PageLoader
+    DEFAULT_MAX_PAGES: Integer
     type list_entry = { title: String, show_url: String, ?thumbnail_url: String? }
     type list_parser = ^(document: untyped) -> (Array[list_entry] | Enumerator::Lazy[list_entry, untyped])
 
@@ -13,7 +17,8 @@ module Irasutoya
     def self.each_list_link: (
       String,
       fetch: ^(String) -> untyped,
-      parse: list_parser
+      parse: list_parser,
+      max_pages: Integer
     ) { (IrasutoLink) -> void } -> void
 
     def self.load_detail: (
@@ -27,6 +32,7 @@ module Irasutoya
     private def self.parse_detail: (Method, untyped, String) -> { title: String, description: String, image_urls: Array[String], ?categories: Array[Category] }
     private def self.fetch_list_page: (String, Integer, ^(String) -> untyped) -> [untyped, String]?
     private def self.each_page_link: (untyped, String, list_parser) { (IrasutoLink) -> void } -> void
+    private def self.bounded_fetch: (^(String) -> untyped, Integer) -> ^(String) -> untyped
     private def self.each_list_page: (String, ^(String) -> untyped) { (untyped, String) -> void } -> void
     private def self.older_page_url: (untyped, String) -> String?
     private def self.request_key: (String) -> String
