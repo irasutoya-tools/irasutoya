@@ -11,6 +11,8 @@ module Irasutoya
 
       def self.trusted_request_url: (String) -> String?
 
+      def self.with_fetch_timeout: [A] () { (Numeric) -> A } -> A
+
       module Methods
         def fetch_page_and_parse: (String, ?uri: URI::Generic?) -> untyped
 

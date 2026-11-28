@@ -27,6 +27,12 @@ module Irasutoya
         nil
       end
 
+      def self.with_fetch_timeout(&)
+        Timeout.timeout(FETCH_TIMEOUT, FetchDeadlineExceeded, &)
+      rescue FetchDeadlineExceeded => e
+        raise Timeout::Error, e.message
+      end
+
       module Methods
         def fetch_page_and_parse(url, uri: nil)
           with_fetch_timeout do
@@ -39,9 +45,7 @@ module Irasutoya
         private
 
         def with_fetch_timeout(&)
-          Timeout.timeout(FETCH_TIMEOUT, FetchDeadlineExceeded, &)
-        rescue FetchDeadlineExceeded => e
-          raise Timeout::Error, e.message
+          HasDocumentFetcher.with_fetch_timeout(&)
         end
       end
 
