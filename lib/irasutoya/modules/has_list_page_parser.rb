@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
+require 'irasutoya/modules/dual_level'
+
 module Irasutoya
   module Modules
     module HasListPageParser
-      def self.included(klass)
-        super
-        klass.send(:include, Irasutoya::Modules::HasListPageParser::Methods)
-        klass.send(:extend, Irasutoya::Modules::HasListPageParser::Methods)
-      end
+      include Irasutoya::Modules::DualLevel
 
       module Methods
         def parse_list_page(document:)

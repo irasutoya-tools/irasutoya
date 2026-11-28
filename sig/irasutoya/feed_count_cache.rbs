@@ -17,16 +17,16 @@ module Irasutoya
     @refresh: FeedCountRefresh?
 
     def initialize: (ttl: Integer) { () -> fetch_result } -> void
-    def fetch: (?stale_count: Integer?) -> fetch_result
+    def fetch: (?stale_count: Integer?, ?fetch: ^() -> fetch_result) -> fetch_result
 
     private
 
     def cached_count: -> Integer?
     def wait_for_current_refresh: -> fetch_result?
     def wait_for_refresh: (FeedCountRefresh) -> fetch_result?
-    def refresh_count: (FeedCountRefresh) -> fetch_result
+    def refresh_count: (FeedCountRefresh, ^() -> fetch_result) -> fetch_result
     def finish_refresh: -> void
-    def fetch_and_cache: -> fetch_result
+    def fetch_and_cache: (^() -> fetch_result) -> fetch_result
     def with_count_interrupt: [A] (:never | :immediate) { () -> A } -> A
     def clock_time: -> Float
   end
