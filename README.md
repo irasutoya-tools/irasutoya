@@ -29,6 +29,16 @@ Run `bundle install` to install the gem from RubyGems. To install it directly wi
 gem install irasutoya
 ```
 
+### Install the development version
+
+Examples marked **Unreleased** require the current development version. To use it, replace the RubyGems entry in your Gemfile with:
+
+```ruby
+gem 'irasutoya', github: 'irasutoya-tools/irasutoya', branch: 'master'
+```
+
+Run `bundle install`, then use `bundle exec ruby` to run scripts with that version.
+
 ## Quick start
 
 Save this example as `find_illustration.rb`:
@@ -54,7 +64,7 @@ See [Getting started](docs/getting-started.md) for a walkthrough from search res
 See the [Ruby API reference](docs/usage.md) for pagination, return values, and fetch behavior.
 See [Troubleshooting](docs/troubleshooting.md) for empty results and fetch errors.
 
-Fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
+In the [development version](#install-the-development-version), fetch operations raise `Timeout::Error` if they exceed 10 seconds in total. Redirects share this limit, as do all feed and detail requests made by `Irasutoya::Irasuto.random`.
 HTML responses are limited to 4 MiB and feed responses to 1 MiB. Fetch operations raise
 `Irasutoya::ResponseTooLargeError` when a response exceeds its limit after decompression.
 
@@ -83,17 +93,19 @@ irasuto_links = category.fetch_irasuto_links #=> returns array of IrasutoLink in
 irasuto_link = irasuto_links.first
 irasuto_link.title
 irasuto_link.show_url
-irasuto_link.thumbnail_url
 
 irasuto = irasuto_link.fetch_irasuto #=> returns Irasuto instance
 ```
 
-Search and category results expose the thumbnail URL embedded in each listing
+**Unreleased.** The [development version](#install-the-development-version) adds
+`link.thumbnail_url`. Search and category results expose the thumbnail URL embedded in each listing
 card. The URL keeps the size specified in the source and can be used for a
 preview without fetching the detail page. Cards without a usable thumbnail
 return `nil` from `thumbnail_url`.
 
 ### Browse search and category results
+
+**Unreleased.** Both enumerators require the [development version](#install-the-development-version).
 
 ```ruby
 shortlist = Irasutoya::Irasuto.each_search_result(query: '猫').take(10)
@@ -107,6 +119,8 @@ as needed and yield `IrasutoLink` objects. Use `take` or `find` to stop early, a
 `fetch_irasuto` on a chosen link to load its details.
 
 ### Open a saved or shared post URL
+
+**Unreleased.** `from_url` requires the [development version](#install-the-development-version).
 
 Pass an absolute post URL on `www.irasutoya.com` to `Irasutoya::Irasuto.from_url`.
 The URL can come from a pasted link or a previously selected illustration:
