@@ -149,6 +149,24 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).to have_received(:request_get).once
   end
 
+  it 'raises at the page limit even when no listing yields a result' do
+    stub_search_page(search_uri, [], next_href)
+    stub_search_page(next_uri, [], '/search?q=cat&start=14')
+
+    results = described_class.each_search_result(query: query, max_pages: 2)
+    expect { results.take(1) }.to raise_error(Irasutoya::PageLimitExceededError, /2 pages/)
+    expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+    expect(page_http).to have_received(:request_get).twice
+  end
+
+  it 'requires a positive integer page limit before fetching' do
+    [nil, 0, -1, 1.5].each do |limit|
+      expect { described_class.each_search_result(query: query, max_pages: limit).next }.to raise_error(ArgumentError)
+    end
+    expect(page_http).not_to have_received(:request_get)
+  end
+
   it 'fetches nothing until enumeration starts and stops at a page boundary' do
     results = described_class.each_search_result(query: query)
 
@@ -178,14 +196,14 @@ RSpec.describe Irasutoya::Irasuto do
       show_url: URI.join(search_url, first_results.first).to_s,
       thumbnail_url: thumbnail_url
     )
-    expect(described_class.each_search_result(query: query).take(1)).to match([first_result])
+    expect(described_class.each_search_result(query: query, max_pages: 1).take(1)).to match([first_result])
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
   it 'enumerates results in order through the last page with one request per page' do
     expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
-    links = described_class.each_search_result(query: query).to_a
+    links = described_class.each_search_result(query: query, max_pages: 2).to_a
 
     expect(links.map(&:show_url)).to eq(expected_urls)
     expect(links.map(&:thumbnail_url)).to eq([thumbnail_url] * expected_urls.size)

@@ -21,8 +21,20 @@ RSpec.describe Irasutoya::Category do
     expect(http).to have_received(:request_get).with(next_path).once
   end
 
+  it 'raises at the page limit in block form when neither listing yields a result' do
+    stub_html(http, %(<a class="blog-pager-older-link" href="#{CGI.escapeHTML(next_path)}">Next</a>), path: first_path)
+    stub_html(http, '<a class="blog-pager-older-link" href="?page=3">Next</a>', path: next_path)
+
+    expect do
+      category.each_irasuto_link(max_pages: 2) { break }
+    end.to raise_error(Irasutoya::PageLimitExceededError, /2 pages/)
+    expect(http).to have_received(:request_get).with(first_path).once
+    expect(http).to have_received(:request_get).with(next_path).once
+    expect(http).to have_received(:request_get).twice
+  end
+
   it 'does not fetch the next page until the enumerator advances to it' do
-    results = category.each_irasuto_link
+    results = category.each_irasuto_link(max_pages: 2)
     expect(http).not_to have_received(:request_get)
 
     expect(results.next.title).to eq('Sleeping cat')
@@ -53,7 +65,7 @@ RSpec.describe Irasutoya::Category do
     html = html.sub(/href="\?[^"]+"/, %(href="http://www.irasutoya.com#{first_path}"))
     stub_html(http, html, path: first_path)
 
-    expect(category.each_irasuto_link.map(&:title)).to eq(['Sleeping cat'])
+    expect(category.each_irasuto_link(max_pages: 1).map(&:title)).to eq(['Sleeping cat'])
     expect(http).to have_received(:request_get).with(first_path).once
     expect(http).to have_received(:request_get).once
   end

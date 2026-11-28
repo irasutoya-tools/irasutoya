@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 module Irasutoya
+  class PageLimitExceededError < StandardError; end
+
   module PageLoader
+    DEFAULT_MAX_PAGES = 100
+
     def self.load_list(url, fetch:, parse:, page: 0)
       listing = fetch_list_page(url, page, fetch)
       return [] unless listing
@@ -13,8 +17,8 @@ module Irasutoya
       links
     end
 
-    def self.each_list_link(url, fetch:, parse:, &)
-      each_list_page(url, fetch) do |document, page_url|
+    def self.each_list_link(url, fetch:, parse:, max_pages:, &)
+      each_list_page(url, bounded_fetch(fetch, max_pages)) do |document, page_url|
         each_page_link(document, page_url, parse, &)
       end
     end
@@ -64,6 +68,19 @@ module Irasutoya
       nil
     end
     private_class_method :fetch_list_page
+
+    def self.bounded_fetch(fetch, max_pages)
+      raise ArgumentError, 'max_pages must be a positive integer' unless max_pages.is_a?(Integer) && max_pages.positive?
+
+      remaining = max_pages
+      lambda do |url|
+        raise PageLimitExceededError, "Listing traversal exceeded the limit of #{max_pages} pages" if remaining.zero?
+
+        remaining -= 1
+        fetch.call(url)
+      end
+    end
+    private_class_method :bounded_fetch
 
     def self.each_list_page(url, fetch)
       url = without_fragment(url)
