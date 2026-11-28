@@ -20,7 +20,7 @@ module Irasutoya
     end
 
     def self.load_detail(url, fetch:, parse:)
-      document = fetch.call(url)
+      document = Modules::HasDocumentFetcher.with_fetch_timeout { fetch.call(url) }
       parsed = parse_detail(parse, document, url)
       title = parsed.fetch(:title)
       image_urls = parsed.fetch(:image_urls)
@@ -69,7 +69,7 @@ module Irasutoya
       url = without_fragment(url)
       visited = Set.new
       while url && visited.add?(request_key(url))
-        document = fetch.call(url)
+        document = Modules::HasDocumentFetcher.with_fetch_timeout { fetch.call(url) }
         break unless document
 
         page_url = without_fragment(effective_url(document, url))

@@ -4,6 +4,19 @@ RSpec.describe 'Page loading overrides' do
   let(:document) { Object.new }
   let(:detail_url) { 'https://www.irasutoya.com/2026/11/post.html' }
 
+  shared_examples 'a deadline for the fetch override' do
+    it 'raises when the receiver fetch exceeds the page deadline' do
+      stub_const('Irasutoya::Modules::HasDocumentFetcher::FETCH_TIMEOUT', 0.05)
+      page = Nokogiri::HTML.parse(File.read('spec/files/show.html'))
+      allow(receiver).to receive(:fetch_page_and_parse).with(fetch_url) do
+        sleep 0.2
+        page
+      end
+
+      expect { load_page }.to raise_error(Timeout::Error)
+    end
+  end
+
   shared_examples 'list loading with receiver overrides' do
     it 'builds links from the receiver fetch and parser results' do
       allow(receiver).to receive(:fetch_page_and_parse).with(list_url).and_return(document)
@@ -60,8 +73,37 @@ RSpec.describe 'Page loading overrides' do
     context 'when enumerating links' do
       let(:document) { Nokogiri::HTML.parse('<html></html>') }
       let(:links) { receiver.each_search_result(query: 'cat').to_a }
+      let(:fetch_url) { list_url }
+      let(:load_page) { links }
 
       include_examples 'list loading with receiver overrides'
+      include_examples 'a deadline for the fetch override'
+
+      it 'gives each page its own deadline and allows pauses between results' do
+        stub_const('Irasutoya::Modules::HasDocumentFetcher::FETCH_TIMEOUT', 0.5)
+        next_url = 'https://www.irasutoya.com/search?q=cat&start=7'
+        first_page = Nokogiri::HTML.parse('<a class="blog-pager-older-link" href="?q=cat&start=7">Next</a>')
+        allow(receiver).to receive(:fetch_page_and_parse).with(list_url) do
+          sleep 0.3
+          first_page
+        end
+        allow(receiver).to receive(:fetch_page_and_parse).with(next_url) do
+          sleep 0.3
+          document
+        end
+        allow(receiver).to receive(:parse_list_page).with(document: first_page)
+                                                    .and_return([{ title: 'First link', show_url: detail_url }])
+        allow(receiver).to receive(:parse_list_page).with(document: document)
+                                                    .and_return([{ title: 'Second link', show_url: detail_url }])
+
+        titles = []
+        receiver.each_search_result(query: 'cat') do |link|
+          titles << link.title
+          sleep 0.6 if titles.one?
+        end
+
+        expect(titles).to eq(['First link', 'Second link'])
+      end
     end
 
     it 'uses the receiver fetch override for every search page and parses the requested page' do
@@ -86,8 +128,11 @@ RSpec.describe 'Page loading overrides' do
     context 'when enumerating links' do
       let(:document) { Nokogiri::HTML.parse('<html></html>') }
       let(:links) { receiver.each_irasuto_link.to_a }
+      let(:fetch_url) { list_url }
+      let(:load_page) { links }
 
       include_examples 'list loading with receiver overrides'
+      include_examples 'a deadline for the fetch override'
     end
   end
 
@@ -130,9 +175,12 @@ RSpec.describe 'Page loading overrides' do
     let(:receiver) { Class.new(Irasutoya::Irasuto) }
     let(:detail_url) { 'https://www.irasutoya.com/2014/03/blog-post_5924.html' }
     let(:illustration) { receiver.from_url(detail_url) }
+    let(:fetch_url) { detail_url }
+    let(:load_page) { illustration }
 
     include_examples 'detail loading with receiver overrides'
     include_examples 'detail post validation'
+    include_examples 'a deadline for the fetch override'
 
     it 'rejects malformed input before calling a fetch override' do
       expect(receiver).not_to receive(:fetch_page_and_parse)
@@ -170,9 +218,12 @@ RSpec.describe 'Page loading overrides' do
     let(:detail_url) { 'https://example.com/illustration' }
     let(:receiver) { Class.new(Irasutoya::IrasutoLink).new(title: 'Cat', show_url: detail_url) }
     let(:illustration) { receiver.fetch_irasuto }
+    let(:fetch_url) { detail_url }
+    let(:load_page) { illustration }
 
     include_examples 'detail loading with receiver overrides'
     include_examples 'detail post validation'
+    include_examples 'a deadline for the fetch override'
 
     it 'resolves relative images when a document-only parser override calls super' do
       html = '<div class="post"><div class="title"><h2>Cat</h2></div><div class="entry"><img src="cat.png"></div></div>'
