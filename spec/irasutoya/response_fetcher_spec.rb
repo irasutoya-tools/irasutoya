@@ -60,6 +60,24 @@ RSpec.describe Irasutoya::ResponseFetcher do
     end
   end
 
+  it 'rejects a gzip response with zero encoded bytes' do
+    with_gzip_response('') do |url|
+      expect { described_class.get(url, max_bytes: 5) }.to raise_error(Zlib::BufError)
+    end
+  end
+
+  it 'decodes a valid gzip member with an empty body' do
+    with_gzip_response(Zlib.gzip('')) do |url|
+      expect(described_class.get(url, max_bytes: 5)).to eq(['', nil])
+    end
+  end
+
+  it 'accepts a no-content response with a gzip header' do
+    with_response('Content-Encoding: gzip', '', status: '204 No Content') do |url|
+      expect(described_class.get(url, max_bytes: 5)).to eq(['', nil])
+    end
+  end
+
   it 'decodes concatenated gzip members at the combined byte limit' do
     with_gzip_response(Zlib.gzip('first') + Zlib.gzip('second')) do |url|
       expect(described_class.get(url, max_bytes: 11)).to eq(['firstsecond', nil])
