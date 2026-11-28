@@ -22,7 +22,7 @@ module Irasutoya
     private
 
     def cached_count: -> Integer?
-    def wait_for_current_refresh: -> fetch_result?
+    def cached_or_shared_result: (Integer? stale_count) -> fetch_result?
     def wait_for_refresh: (FeedCountRefresh) -> fetch_result?
     def refresh_count: (FeedCountRefresh, ^() -> fetch_result) -> fetch_result
     def finish_refresh: -> void
