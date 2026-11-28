@@ -76,7 +76,7 @@ module Irasutoya
       inflater = Zlib::Inflate.new(Zlib::MAX_WBITS + 16)
       response.decode_content = false
       response.read_body { |chunk| inflate_members(inflater, chunk, &) }
-      inflater.finish if inflater.total_in.positive? && !inflater.finished?
+      inflater.finish if response.class.body_permitted? && !inflater.finished?
       response.delete('content-encoding')
     ensure
       inflater&.close
