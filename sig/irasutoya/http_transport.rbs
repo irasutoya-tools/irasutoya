@@ -39,13 +39,28 @@ module Irasutoya
     private def self.inflate_members: (Zlib::Inflate, String) { (String) -> void } -> void
   end
 
-  class HttpSessionPool
-    type origin = [Integer, String, String, Integer, String?]
+  type origin = [Integer, String, String, Integer, String?]
 
+  class SessionWaiters
+    type queue = Hash[ConditionVariable, true]
+
+    @queues: Hash[origin, queue]
+
+    def initialize: () -> void
+    def wait: (origin, Mutex) -> void
+    def notify: (origin) -> void
+
+    private
+
+    def wait_interruptibly: (ConditionVariable, Mutex) -> void
+    def finish_wait: (origin, queue, ConditionVariable, true?) -> void
+  end
+
+  class HttpSessionPool
     MAX_CONNECTIONS_PER_ORIGIN: Integer
     @max_connections: Integer
     @lock: Mutex
-    @available: ConditionVariable
+    @waiters: SessionWaiters
     @sessions: Hash[origin, Hash[HttpSession, bool]]
     @proxy_decisions: ProxyDecisions
 
@@ -62,7 +77,6 @@ module Irasutoya
     def acquire_session: (origin) -> HttpSession
     def idle_session: (Hash[HttpSession, bool]) -> HttpSession?
     def new_session: (origin) -> HttpSession
-    def wait_for_session: () -> void
     def release_session: (origin, HttpSession) -> void
     def remove_idle_session: (origin, HttpSession) -> bool
   end
