@@ -25,7 +25,8 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
-  it 'follows the advertised cursor and returns links with thumbnails from the second page' do
+  it 'follows a padded older link and returns links with thumbnails from the second page' do
+    stub_search_page(first_page_uri, first_results, "  #{next_href}  ")
     links = described_class.search(query: query, page: 1)
 
     expect(links.map(&:show_url)).to eq(%w[
@@ -61,7 +62,7 @@ RSpec.describe Irasutoya::Irasuto do
 
   context 'when the older link points off-origin' do
     before do
-      stub_search_page(search_uri, first_results, 'https://example.com/search?q=cat')
+      stub_search_page(search_uri, first_results, '  https://example.com/search?q=cat  ')
     end
 
     it 'returns an empty array for the next page' do
@@ -129,7 +130,7 @@ RSpec.describe Irasutoya::Irasuto do
   end
 
   it 'returns an empty array without another request when the older link is malformed' do
-    stub_search_page(search_uri, first_results, 'https://[bad]/search')
+    stub_search_page(search_uri, first_results, '  https://[bad]/search  ')
 
     expect(described_class.search(query: query, page: 1)).to eq([])
     expect(page_http).to have_received(:request_get).once
@@ -183,7 +184,8 @@ RSpec.describe Irasutoya::Irasuto do
     expect(page_http).not_to have_received(:request_get).with(next_uri.request_uri)
   end
 
-  it 'enumerates results in order through the last page with one request per page' do
+  it 'enumerates results in order across a padded older link with one request per page' do
+    stub_search_page(first_page_uri, first_results, "  #{next_href}  ")
     expected_urls = (first_results + next_results).map { |path| URI.join(search_url, path).to_s }
     links = described_class.each_search_result(query: query).to_a
 
@@ -191,6 +193,13 @@ RSpec.describe Irasutoya::Irasuto do
     expect(links.map(&:thumbnail_url)).to eq([thumbnail_url] * expected_urls.size)
     expect(page_http).to have_received(:request_get).with(search_uri.request_uri).once
     expect(page_http).to have_received(:request_get).with(next_uri.request_uri).once
+  end
+
+  it 'stops pagination when the older link contains only whitespace' do
+    stub_search_page(search_uri, first_results, " \t ")
+
+    expect(described_class.search(query: query, page: 1)).to eq([])
+    expect(page_http).to have_received(:request_get).once
   end
 
   it 'stops enumeration when older links form a cycle' do
