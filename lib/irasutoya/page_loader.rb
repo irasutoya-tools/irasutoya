@@ -88,7 +88,7 @@ module Irasutoya
 
     def self.older_page_url(document, page_url)
       href = document.at_css('a.blog-pager-older-link[href]')&.[]('href')
-      return if href.nil? || href.empty?
+      return unless href
 
       url = resolve_trusted_href(page_url, href)
       without_fragment(url) if url
@@ -101,6 +101,9 @@ module Irasutoya
     private_class_method :without_fragment
 
     def self.resolve_trusted_href(page_url, href)
+      href = href.strip
+      return if href.empty?
+
       uri = URI.join(page_url, href)
       uri.to_s if Modules::HasDocumentFetcher.trusted_page_origin?(uri)
     rescue URI::Error
